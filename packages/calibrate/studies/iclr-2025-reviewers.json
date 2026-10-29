@@ -1,0 +1,207 @@
+{
+  "proxy": true,
+  "synthetic": false,
+  "source": "https://media.githubusercontent.com/media/papercopilot/paperlists/main/iclr/iclr2025.json",
+  "source_sha256": "d288d0348d121671156481f0939312a45abbc5f95511c15c4b9a6e9675d19549",
+  "papers_listed": 11677,
+  "papers_scored": 11521,
+  "ratings_sorted_share": 1.0,
+  "shuffle_seed": 20261027,
+  "ceiling": {
+    "3": 0.24003962898527756,
+    "4": 0.23667675722868833
+  },
+  "human_as_system": {
+    "bias": {
+      "estimate": 0.0028625452634038,
+      "low": -0.03295540824670016,
+      "high": 0.03883624381886851
+    },
+    "mae": {
+      "estimate": 1.4070958902776156,
+      "low": 1.385801162247401,
+      "high": 1.4289912101390025
+    },
+    "r": {
+      "estimate": 0.31714692003818556,
+      "low": 0.2981698867635253,
+      "high": 0.3350376525364607
+    }
+  },
+  "criteria": {
+    "soundness": {
+      "same_grade": 0.45193334324444867,
+      "r": 0.17252720598784999
+    },
+    "presentation": {
+      "same_grade": 0.4294441215823546,
+      "r": 0.17402437258558937
+    },
+    "contribution": {
+      "same_grade": 0.4506088578340609,
+      "r": 0.1878709628600752
+    }
+  },
+  "panels": {
+    "one reviewer swapped for another": {
+      "papers": 9784,
+      "error_change": 0.014947378579355464
+    },
+    "mean of 2 reviewers instead of one": {
+      "papers": 9784,
+      "error_change": -0.18981482842630704
+    },
+    "mean of 3 reviewers instead of one": {
+      "papers": 2051,
+      "error_change": -0.2508701284660513
+    }
+  },
+  "methods": {
+    "permutation": "the harness reading",
+    "bootstrap": "the reading it replaced"
+  },
+  "power": [
+    {
+      "label": "one reviewer swapped for another [bootstrap]",
+      "n": 10,
+      "trials": 200,
+      "better": 11,
+      "worse": 13
+    },
+    {
+      "label": "one reviewer swapped for another [bootstrap]",
+      "n": 20,
+      "trials": 200,
+      "better": 6,
+      "worse": 5
+    },
+    {
+      "label": "one reviewer swapped for another [bootstrap]",
+      "n": 40,
+      "trials": 200,
+      "better": 7,
+      "worse": 3
+    },
+    {
+      "label": "one reviewer swapped for another [bootstrap]",
+      "n": 80,
+      "trials": 200,
+      "better": 2,
+      "worse": 8
+    },
+    {
+      "label": "one reviewer swapped for another [permutation]",
+      "n": 10,
+      "trials": 200,
+      "better": 4,
+      "worse": 5
+    },
+    {
+      "label": "one reviewer swapped for another [permutation]",
+      "n": 20,
+      "trials": 200,
+      "better": 1,
+      "worse": 3
+    },
+    {
+      "label": "one reviewer swapped for another [permutation]",
+      "n": 40,
+      "trials": 200,
+      "better": 3,
+      "worse": 1
+    },
+    {
+      "label": "one reviewer swapped for another [permutation]",
+      "n": 80,
+      "trials": 200,
+      "better": 3,
+      "worse": 6
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [bootstrap]",
+      "n": 10,
+      "trials": 200,
+      "better": 37,
+      "worse": 2
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [bootstrap]",
+      "n": 20,
+      "trials": 200,
+      "better": 56,
+      "worse": 0
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [bootstrap]",
+      "n": 40,
+      "trials": 200,
+      "better": 89,
+      "worse": 0
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [bootstrap]",
+      "n": 80,
+      "trials": 200,
+      "better": 143,
+      "worse": 0
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [permutation]",
+      "n": 10,
+      "trials": 200,
+      "better": 17,
+      "worse": 1
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [permutation]",
+      "n": 20,
+      "trials": 200,
+      "better": 36,
+      "worse": 0
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [permutation]",
+      "n": 40,
+      "trials": 200,
+      "better": 78,
+      "worse": 0
+    },
+    {
+      "label": "mean of 2 reviewers instead of one [permutation]",
+      "n": 80,
+      "trials": 200,
+      "better": 140,
+      "worse": 0
+    },
+    {
+      "label": "mean of 3 reviewers instead of one [permutation]",
+      "n": 10,
+      "trials": 200,
+      "better": 28,
+      "worse": 0
+    },
+    {
+      "label": "mean of 3 reviewers instead of one [permutation]",
+      "n": 20,
+      "trials": 200,
+      "better": 55,
+      "worse": 0
+    },
+    {
+      "label": "mean of 3 reviewers instead of one [permutation]",
+      "n": 40,
+      "trials": 200,
+      "better": 117,
+      "worse": 0
+    },
+    {
+      "label": "mean of 3 reviewers instead of one [permutation]",
+      "n": 80,
+      "trials": 200,
+      "better": 174,
+      "worse": 0
+    }
+  ],
+  "trials": 200,
+  "power_resamples": 1000
+}

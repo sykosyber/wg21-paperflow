@@ -1,0 +1,386 @@
+# Calibration harness for the paperweight prompt (packages/calibrate).
+#
+# - A pull request that touches the prompt or the harness: replay the
+#   baseline's recorded votes under the candidate prompt when only the Assess
+#   epilogue's tunables changed (no model calls), and comment. Otherwise
+#   comment that a full run is needed. The baseline is the last real full run
+#   for vars.CALIBRATE_MODEL on the calibration branch; until one exists, the
+#   SYNTHETIC baseline is used, and the comment starts with SYNTHETIC.
+# - The `calibrate` label, or a manual dispatch: a full run with the
+#   paperweight binary from tests.yml, through the gateway secrets. Without
+#   them it skips cleanly. Maintainers only: fork pull requests cannot read
+#   the secrets anyway.
+# - A push to master that changes the prompt: the merged pull request's run is
+#   appended to the history on the calibration branch. CI never pushes to
+#   master.
+#
+# Text from the pull request (the mode's reason quotes changed prompt lines)
+# only ever travels through files and environment variables, never through
+# ${{ }} inside a script.
+
+name: calibrate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+    paths:
+      - crates/paperweight/paperweight.md
+      - packages/calibrate/**
+      - .github/workflows/calibrate.yml
+  push:
+    branches: [master]
+    paths:
+      - crates/paperweight/paperweight.md
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Gateway model id (empty binds the gateway's first chat model)
+        required: false
+        default: ""
+      papers:
+        description: Comma-separated subset of papers (the comment says it is partial)
+        required: false
+        default: ""
+      repeats:
+        description: Repeats per paper
+        required: false
+        default: "3"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: calibrate-${{ github.event.pull_request.number || github.ref }}-${{ github.event.action || github.event_name }}
+  cancel-in-progress: false
+
+env:
+  # Each job syncs only the calibrate package (calibrate and lupa); without
+  # this, `uv run` would sync the whole workspace, torch included, first.
+  UV_NO_SYNC: "1"
+  PROMPT: crates/paperweight/paperweight.md
+  SYNTHETIC_SET: packages/calibrate/data/synthetic
+  GOLDEN_SET: packages/calibrate/data/golden
+  SYNTHETIC_MODEL: shim-calibrated
+  HISTORY: ${{ github.workspace }}/../calibration-history
+
+jobs:
+  replay:
+    name: replay (no model calls)
+    if: github.event_name == 'pull_request' && github.event.action != 'labeled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      MARKER: "<!-- calibrate:replay -->"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync the calibrate package
+        run: uv sync --frozen --package calibrate --no-default-groups
+
+      - name: Fetch the baseline history
+        run: |
+          if git fetch --depth 1 origin calibration; then
+            git worktree add --detach "$HISTORY" FETCH_HEAD
+          else
+            mkdir -p "$HISTORY"
+            echo "::notice title=calibrate::No calibration branch yet, so no baseline history."
+          fi
+
+      - name: Find the baseline
+        id: base
+        env:
+          MODEL: ${{ vars.CALIBRATE_MODEL }}
+        run: |
+          if [ -n "$MODEL" ] && path=$(uv run --frozen calibrate baseline --history "$HISTORY" --model "$MODEL"); then
+            { echo "run=$path"; echo "set=$GOLDEN_SET"; echo "synthetic=false"; } >> "$GITHUB_OUTPUT"
+          elif path=$(uv run --frozen calibrate baseline --history "$HISTORY" --model "$SYNTHETIC_MODEL" --synthetic); then
+            echo "::notice title=calibrate::No real baseline yet: replaying against the SYNTHETIC baseline. The comment is marked SYNTHETIC."
+            { echo "run=$path"; echo "set=$SYNTHETIC_SET"; echo "synthetic=true"; } >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=calibrate::No baseline in the history: nothing to replay against."
+          fi
+
+      - name: Choose the mode
+        id: mode
+        if: steps.base.outputs.run != ''
+        env:
+          BASE: ${{ steps.base.outputs.run }}
+        run: |
+          uv run --frozen calibrate choose --prompt "$PROMPT" --from "$BASE" > mode.txt
+          echo "mode=$(head -n 1 mode.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Replay and compare
+        id: compare
+        if: steps.mode.outputs.mode == 'replay'
+        env:
+          BASE: ${{ steps.base.outputs.run }}
+          SET: ${{ steps.base.outputs.set }}
+        run: |
+          run=$(uv run --frozen calibrate replay --prompt "$PROMPT" --from "$BASE" --runs-dir runs)
+          set +e
+          uv run --frozen calibrate compare "$run" "$BASE" --set "$SET" --out comment.md
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Say a full run is needed
+        if: steps.mode.outputs.mode == 'full'
+        env:
+          SYNTHETIC: ${{ steps.base.outputs.synthetic }}
+        run: |
+          {
+            if [ "$SYNTHETIC" = "true" ]; then
+              echo "SYNTHETIC: the baseline this was checked against is synthetic."
+            fi
+            echo "### Paperweight calibration · a full run is needed"
+            echo "This change cannot be replayed on recorded votes:"
+            echo
+            tail -n +2 mode.txt
+            echo
+            echo "A maintainer can add the \`calibrate\` label to run the set through the model."
+          } > comment.md
+
+      - name: Comment on the pull request
+        if: hashFiles('comment.md') != ''
+        # A pull request from a fork gets a read-only token; the job summary
+        # below still carries the comment.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          printf '\n%s\n' "$MARKER" >> comment.md
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+                 --jq '.[] | select(.body | contains(env.MARKER)) | .id' | tail -n 1)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F body=@comment.md > /dev/null
+          else
+            gh pr comment "$PR" --body-file comment.md
+          fi
+
+      - name: Job summary
+        if: always() && hashFiles('comment.md') != ''
+        run: cat comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.mode.outputs.mode == 'replay'
+        with:
+          name: calibration-replay-${{ github.event.pull_request.head.sha }}
+          path: runs/
+          if-no-files-found: error
+
+      - name: Fail on a failed gate
+        if: steps.compare.outputs.status != '' && steps.compare.outputs.status != '0'
+        run: |
+          echo "::error title=calibrate::A calibration gate failed; the comment says which."
+          exit 1
+
+  full:
+    name: full run (model calls)
+    if: >-
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'calibrate')
+      || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      pull-requests: write
+      actions: read
+    env:
+      RUNVIL_GATEWAY_URL: ${{ secrets.RUNVIL_GATEWAY_URL }}
+      RUNVIL_GATEWAY_API_KEY: ${{ secrets.RUNVIL_GATEWAY_API_KEY }}
+      MARKER: "<!-- calibrate:full -->"
+    steps:
+      - name: Check the gateway
+        id: gateway
+        run: |
+          if [ -z "$RUNVIL_GATEWAY_URL" ] || [ -z "$RUNVIL_GATEWAY_API_KEY" ]; then
+            echo "::notice title=calibrate::RUNVIL_GATEWAY_URL is not set (or RUNVIL_GATEWAY_API_KEY is missing): skipping the full run. Add both repository secrets to enable it."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gateway.outputs.skip != 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Check the golden set
+        id: golden
+        if: steps.gateway.outputs.skip != 'true'
+        run: |
+          if [ ! -f "$GOLDEN_SET/papers.jsonl" ]; then
+            echo "::notice title=calibrate::The golden set is not in the repository yet: skipping the full run rather than spend model calls on synthetic grades."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install uv
+        if: steps.gateway.outputs.skip != 'true' && steps.golden.outputs.skip != 'true'
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync the calibrate package
+        if: steps.gateway.outputs.skip != 'true' && steps.golden.outputs.skip != 'true'
+        run: |
+          uv python install 3.12
+          uv sync --frozen --package calibrate --no-default-groups
+
+      - name: Fetch the paperweight binary from tests.yml
+        if: steps.gateway.outputs.skip != 'true' && steps.golden.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow tests.yml --commit "$SHA" \
+                 --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$id" ]; then
+            echo "::error title=calibrate::No successful tests.yml run for $SHA to take the paperweight binary from."
+            exit 1
+          fi
+          gh run download "$id" --repo "$GITHUB_REPOSITORY" --name paperweight-linux-x86_64 --dir bin
+          chmod +x bin/paperweight
+          echo "PAPERWEIGHT_BIN=$PWD/bin/paperweight" >> "$GITHUB_ENV"
+
+      - name: Full run
+        id: run
+        if: steps.gateway.outputs.skip != 'true' && steps.golden.outputs.skip != 'true'
+        env:
+          MODEL: ${{ inputs.model || vars.CALIBRATE_MODEL }}
+          PAPERS: ${{ inputs.papers }}
+          REPEATS: ${{ inputs.repeats || '3' }}
+        run: |
+          args=(--backend binary --set "$GOLDEN_SET" --repeats "$REPEATS" --jobs 4 --runs-dir runs)
+          if [ -n "$MODEL" ]; then args+=(--model "$MODEL"); fi
+          if [ -n "$PAPERS" ]; then args+=(--papers "$PAPERS"); fi
+          run=$(uv run --frozen calibrate full "${args[@]}")
+          uv run --frozen calibrate report "$run"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "model=$(jq -r .model "$run/meta.json")" >> "$GITHUB_OUTPUT"
+
+      - name: Compare with the baseline
+        id: compare
+        if: steps.run.outputs.run != ''
+        env:
+          RUN: ${{ steps.run.outputs.run }}
+          MODEL: ${{ steps.run.outputs.model }}
+        run: |
+          if git fetch --depth 1 origin calibration; then
+            git worktree add --detach "$HISTORY" FETCH_HEAD
+          fi
+          set +e
+          base=$(uv run --frozen calibrate baseline --history "$HISTORY" --model "$MODEL")
+          uv run --frozen calibrate compare "$RUN" $base --set "$GOLDEN_SET" --out comment.md
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on the pull request
+        if: github.event_name == 'pull_request' && hashFiles('comment.md') != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          printf '\n%s\n' "$MARKER" >> comment.md
+          gh pr comment "$PR" --body-file comment.md
+
+      - name: Job summary
+        if: always() && hashFiles('comment.md') != ''
+        run: cat comment.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        if: steps.run.outputs.run != ''
+        with:
+          name: calibration-full-${{ github.event.pull_request.head.sha || github.sha }}
+          path: runs/
+          if-no-files-found: error
+
+      - name: Fail on a failed gate
+        if: steps.compare.outputs.status != '' && steps.compare.outputs.status != '0'
+        run: |
+          echo "::error title=calibrate::A calibration gate failed; the comment says which."
+          exit 1
+
+  record:
+    name: record the accepted run
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Sync the calibrate package
+        run: |
+          uv python install 3.12
+          uv sync --frozen --package calibrate --no-default-groups
+
+      - name: Download the merged pull request's runs
+        id: runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].number // empty')
+          head=$(gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/pulls" --jq '.[0].head.sha // empty')
+          if [ -z "$pr" ]; then
+            echo "::notice title=calibrate::No pull request for $GITHUB_SHA: nothing to record."
+            exit 0
+          fi
+          mkdir -p accepted
+          for id in $(gh run list --repo "$GITHUB_REPOSITORY" --workflow calibrate.yml --commit "$head" \
+                        --json databaseId --jq '.[].databaseId'); do
+            for name in "calibration-full-$head" "calibration-replay-$head"; do
+              gh run download "$id" --repo "$GITHUB_REPOSITORY" --name "$name" --dir "accepted/$id-$name" 2> /dev/null || true
+            done
+          done
+          echo "pr=$pr" >> "$GITHUB_OUTPUT"
+
+      - name: Append to the history on the calibration branch
+        if: steps.runs.outputs.pr != ''
+        env:
+          PR: ${{ steps.runs.outputs.pr }}
+        run: |
+          shopt -s nullglob
+          runs=(accepted/*/*/meta.json)
+          if [ ${#runs[@]} -eq 0 ]; then
+            echo "::notice title=calibrate::Pull request #$PR left no calibration run to record."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin calibration; then
+            git worktree add -b calibration-update "$HISTORY" FETCH_HEAD
+          else
+            git worktree add --orphan -b calibration-update "$HISTORY"
+          fi
+          for meta in "${runs[@]}"; do
+            uv run --frozen calibrate record "$(dirname "$meta")" --history "$HISTORY" --note "pull request #$PR" \
+              || echo "::warning title=calibrate::$(dirname "$meta") was not recorded."
+          done
+          cd "$HISTORY"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing new to record."
+            exit 0
+          fi
+          git commit -m "Record calibration runs from pull request #$PR"
+          git push origin HEAD:calibration

@@ -1,0 +1,693 @@
+<title>Paperweight Calibration Harness</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a calibration bench sheet. One narrow reading column, wide instrument panels, faint graph-paper ground. */
+:root {
+  --paper: #f2f5f9; --panel: #ffffff; --ink: #13203a; --muted: #586379; --rule: #d3dae6; --grid: #e4e9f1;
+  --accent: #0d7472; --accent-soft: #d4ecea; --stamp: #bd4a12; --good: #2c7a4d; --bad: #b42318;
+  --display: "Literata", Georgia, "Times New Roman", serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #0d1320; --panel: #141c2b; --ink: #e5eaf3; --muted: #97a2b7; --rule: #29354b; --grid: #182234;
+  --accent: #46c7c2; --accent-soft: #163a3c; --stamp: #f08a4b; --good: #5cc28a; --bad: #f2766a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --paper: #0d1320; --panel: #141c2b; --ink: #e5eaf3; --muted: #97a2b7; --rule: #29354b; --grid: #182234;
+  --accent: #46c7c2; --accent-soft: #163a3c; --stamp: #f08a4b; --good: #5cc28a; --bad: #f2766a; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body {
+  background-color: var(--paper); color: var(--ink); font: 15px/1.6 var(--body);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.7rem; }
+h3 { font-size: 1.1rem; font-family: var(--body); font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 500 12px/1.4 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.mono { font-family: var(--mono); }
+code { font: 0.9em var(--mono); background: var(--accent-soft); padding: 1px 5px; border-radius: 3px; }
+a { color: var(--accent); }
+section { display: flex; flex-direction: column; gap: 18px; }
+.lead { font-size: 1.08rem; color: var(--muted); }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 20px; min-width: 0; }
+
+/* hero */
+.hero { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: start; }
+.stamp { font: 700 15px/1 var(--mono); letter-spacing: 0.14em; color: var(--stamp); border: 3px double var(--stamp);
+  padding: 12px 14px; transform: rotate(-6deg); text-align: center; border-radius: 4px; margin-top: 10px; }
+.stamp small { display: block; font: 500 10px/1.4 var(--mono); letter-spacing: 0.06em; margin-top: 6px; }
+.hero-text { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--rule); border-radius: 6px; background: var(--panel); }
+.stat { padding: 14px 16px; border-left: 1px solid var(--rule); display: flex; flex-direction: column; gap: 2px; }
+.stat:first-child { border-left: 0; }
+.stat b { font: 600 1.5rem/1.1 var(--mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+
+/* the loop */
+.loop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.step { font: 500 13px/1.2 var(--body); border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+  border-radius: 999px; padding: 8px 14px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; }
+.step i { font: 500 11px/1 var(--mono); font-style: normal; color: var(--muted); }
+.step[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.step[aria-pressed="true"] i { color: var(--paper); opacity: 0.7; }
+.arrow { color: var(--muted); font-family: var(--mono); }
+.step-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+.cmd { font: 13px/1.5 var(--mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 12px; overflow-x: auto; white-space: pre; }
+
+/* lab */
+.lab { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 20px; align-items: start; }
+.controls { display: flex; flex-direction: column; gap: 18px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+.ctl { display: flex; flex-direction: column; gap: 6px; }
+.ctl label, .ctl .lbl { font: 500 12px/1.3 var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.ctl output { color: var(--ink); }
+.seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+.seg button { font: 500 12.5px/1 var(--mono); padding: 9px 6px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 4px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.btn { font: 500 13px/1 var(--body); padding: 9px 12px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); border-radius: 4px; cursor: pointer; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.lab-out { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.figrow { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; }
+svg text { fill: var(--muted); font: 11px var(--mono); }
+.tbl-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); font-size: 13.5px; white-space: nowrap; }
+th { font: 500 11.5px/1.3 var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+td.num { font-family: var(--mono); }
+.pill { font: 500 11.5px/1 var(--mono); padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; display: inline-block; }
+.pill.better { color: var(--good); } .pill.worse { color: var(--bad); } .pill.noise { color: var(--muted); }
+.comment { font: 12.5px/1.55 var(--mono); background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; padding: 14px; overflow-x: auto; white-space: pre; margin: 0; }
+.comment .syn { color: var(--stamp); font-weight: 500; }
+
+/* inspector */
+.insp-head { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; justify-content: space-between; }
+.insp-head .ctl { min-width: 0; }
+select { font: 14px var(--body); padding: 8px 10px; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); color: var(--ink); max-width: 100%; }
+.heat { display: grid; gap: 2px; font: 11px var(--mono); }
+.heat .cell { aspect-ratio: 1; border-radius: 2px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--ink); min-width: 0; }
+.heat .rowlab { color: var(--muted); padding-right: 8px; display: flex; align-items: center; white-space: nowrap; }
+.heat .grade { font-weight: 500; padding-left: 8px; display: flex; align-items: center; font-variant-numeric: tabular-nums; }
+.heat-scroll { overflow-x: auto; }
+.units { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 16px; font-size: 12.5px; color: var(--muted); }
+.units span b { font-family: var(--mono); color: var(--ink); font-weight: 500; margin-right: 6px; }
+.weight { font: 600 1.25rem/1.2 var(--mono); }
+.legend { display: flex; gap: 10px; align-items: center; font: 11px var(--mono); color: var(--muted); flex-wrap: wrap; }
+.legend i { width: 14px; height: 14px; border-radius: 2px; display: inline-block; }
+
+/* mode chooser */
+.chooser { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 20px; }
+.edits { display: flex; flex-direction: column; gap: 6px; }
+.edit { text-align: left; font: 14px/1.35 var(--body); padding: 10px 12px; border: 1px solid var(--rule); background: var(--panel); color: var(--ink); border-radius: 4px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; }
+.edit[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 3px 0 0 var(--ink); }
+.edit em { font: 500 11px/1.6 var(--mono); font-style: normal; white-space: nowrap; }
+.edit em.replay { color: var(--good); } .edit em.full { color: var(--stamp); }
+.verdict { display: flex; flex-direction: column; gap: 8px; }
+.verdict b { font: 600 1.1rem var(--mono); }
+.promptmap { display: flex; flex-direction: column; gap: 0; font: 11px/1.2 var(--mono); }
+
+/* guardrails + status */
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+ul.rules, ol.rules { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; }
+.status th { white-space: normal; }
+.status td { white-space: normal; vertical-align: top; }
+.tag { font: 500 11px/1 var(--mono); padding: 4px 7px; border-radius: 3px; white-space: nowrap; }
+.tag.real { background: var(--accent-soft); color: var(--accent); }
+.tag.sim { color: var(--stamp); border: 1px solid var(--stamp); }
+.tag.fake { color: var(--muted); border: 1px dashed var(--muted); }
+footer { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+
+@media (max-width: 860px) {
+  .lab, .chooser, .figrow, .step-detail, .cols { grid-template-columns: minmax(0, 1fr); }
+  .controls { position: static; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(odd) { border-left: 0; } .stat { border-top: 1px solid var(--rule); } .stat:first-child, .stat:nth-child(2) { border-top: 0; }
+  .hero { grid-template-columns: 1fr; } .stamp { justify-self: start; }
+}
+@media (prefers-reduced-motion: no-preference) { circle.pt, line.mv { transition: cx .35s ease, cy .35s ease, x2 .35s ease, y2 .35s ease; } }
+</style>
+
+<div class="wrap">
+  <header class="hero">
+    <div class="hero-text">
+      <div class="eyebrow">packages/calibrate · sykosyber/wg21-paperflow · draft PR #1</div>
+      <h1>Paperweight Calibration Harness</h1>
+      <p class="lead">Every change to paperweight.md gets scored against the same human grades and compared with the last accepted run, so an author can see before merging whether grades moved toward the reviewers or away from them, and by more than run-to-run noise. This page runs the harness's replay arithmetic live, on votes recorded from a real run of the prompt's own Lua.</p>
+    </div>
+    <div class="stamp" role="note">SYNTHETIC<small>simulated votes &amp; reviewers<br>not a finding about paperweight</small></div>
+  </header>
+
+  <div class="stats" aria-label="Build summary">
+    <div class="stat"><b>257</b><span>harness tests, green on Ubuntu and Windows CI</span></div>
+    <div class="stat"><b>51</b><span>parity fixtures: Python equals what the Lua printed</span></div>
+    <div class="stat"><b id="stat-match">36/36</b><span>recorded runs this page reproduces exactly</span></div>
+    <div class="stat"><b>0</b><span>model calls made so far</span></div>
+    <div class="stat"><b>4,479</b><span>existing tests, unchanged and passing</span></div>
+  </div>
+
+  <section aria-labelledby="loop-h">
+    <div class="eyebrow">How it works</div>
+    <h2 id="loop-h">From a prompt change to a pull request comment</h2>
+    <p>A change confined to the epilogue's arithmetic replays recorded votes in seconds. Anything that changes what the graders read needs a full run through the model, triggered by a label. Pick a step.</p>
+    <div class="loop" id="loop" role="group" aria-label="Pipeline steps"></div>
+    <div class="panel step-detail">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <h3 id="step-title"></h3>
+        <p id="step-body"></p>
+      </div>
+      <div class="cmd" id="step-cmd"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="lab-h">
+    <div class="eyebrow">Replay lab · computed in your browser</div>
+    <h2 id="lab-h">Change the aggregation, watch the grades move</h2>
+    <p>These are the tunables of the Assess epilogue that replay can evaluate without a model call. The baseline is the current prompt (<code>INTER_RULE = "top2"</code>) on the synthetic baseline run: 12 papers, 3 repeats each, 36 recorded vote grids. Every number below is recomputed from those votes by a port of <code>aggregate.py</code>.</p>
+    <div class="lab">
+      <div class="panel controls">
+        <div class="ctl"><span class="lbl">INTER_RULE</span>
+          <div class="seg" id="rule" role="group" aria-label="Inter-section rule"></div></div>
+        <div class="ctl"><label for="strong">STRONG <output id="strong-o"></output></label>
+          <input type="range" id="strong" min="1" max="2" step="0.25"></div>
+        <div class="ctl"><label for="corr">CORROBORATION <output id="corr-o"></output></label>
+          <input type="range" id="corr" min="2" max="4" step="1"></div>
+        <div class="ctl"><label for="accum">ACCUM_FULL <output id="accum-o"></output></label>
+          <input type="range" id="accum" min="2" max="6" step="0.5"></div>
+        <div class="ctl"><label for="shift">LABELS edges <output id="shift-o"></output></label>
+          <input type="range" id="shift" min="-2" max="2" step="1"></div>
+        <button class="btn" id="reset" type="button">Reset to the current prompt</button>
+        <p class="note">STRONG and CORROBORATION matter only under <code>corroborated</code>; ACCUM_FULL only under <code>accumulate</code>. <code>implementation</code> always takes the max (BINARY).</p>
+      </div>
+      <div class="lab-out">
+        <div class="figrow">
+          <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+            <h3>Paperweight against the reviewers</h3>
+            <svg id="scatter" viewBox="0 0 360 330" role="img" aria-label="Scatter of paperweight totals against reviewer mean totals"></svg>
+            <div class="legend"><span><i style="background:var(--accent)"></i> candidate</span><span><i style="border:1.5px solid var(--muted)"></i> baseline (top2)</span><span>hollow = holdout</span></div>
+          </div>
+          <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+            <h3>Readings on the 10 calibration papers</h3>
+            <div class="tbl-wrap"><table id="readings"></table></div>
+            <p class="note">Paired bootstrap over papers, 2,000 resamples. This page draws resamples with a different seeded generator than the Python harness, so an interval can differ in the second decimal; the point estimates are identical.</p>
+            <div id="bands" class="note"></div>
+          </div>
+        </div>
+        <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+          <h3>The comment the PR would get</h3>
+          <pre class="comment" id="comment"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="insp-h">
+    <div class="eyebrow">Inside one run</div>
+    <h2 id="insp-h">Votes by section, as diagnostics.md records them</h2>
+    <p>Each cell is one criterion in one section of the paper: the mean of three Grade samples. The grade on the right is what the inter-section rule makes of the row. Bookkeeping sections such as changelogs and references stay at zero.</p>
+    <div class="panel" style="display:flex;flex-direction:column;gap:16px">
+      <div class="insp-head">
+        <div class="ctl"><label for="paper">Paper</label><select id="paper"></select></div>
+        <div class="ctl"><label for="rep">Repeat</label><select id="rep"><option value="0">1</option><option value="1">2</option><option value="2">3</option></select></div>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0"><span class="eyebrow">Verdict line</span><span class="weight" id="weight"></span></div>
+      </div>
+      <div class="heat-scroll"><div class="heat" id="heat"></div></div>
+      <div class="legend"><span>section mean</span><i style="background:color-mix(in srgb, var(--accent) 0%, var(--paper))"></i>0<i style="background:color-mix(in srgb, var(--accent) 35%, var(--paper))"></i>0.67<i style="background:color-mix(in srgb, var(--accent) 70%, var(--paper))"></i>1.33<i style="background:var(--accent)"></i>2</div>
+      <div class="units" id="units"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="mode-h">
+    <div class="eyebrow">The mode chooser</div>
+    <h2 id="mode-h">Which edits can be replayed?</h2>
+    <p>The harness diffs the candidate prompt against the baseline's. Replay is offered only when every changed line sits inside the Assess epilogue's Lua block and the epilogues differ only in tunables the Python copy models. Each verdict below is what <code>calibrate choose</code> returned in the test suite.</p>
+    <div class="chooser">
+      <div class="panel" style="display:flex;flex-direction:column;gap:14px">
+        <div class="edits" id="edits" role="group" aria-label="Candidate edits"></div>
+        <div class="verdict"><b id="v-mode"></b><p id="v-why"></p></div>
+      </div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:8px">
+        <span class="eyebrow">paperweight.md · 1,197 lines</span>
+        <svg id="pmap" viewBox="0 0 220 420" role="img" aria-label="Map of paperweight.md with its Lua blocks"></svg>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="guard-h">
+    <div class="eyebrow">Guardrails</div>
+    <h2 id="guard-h">What the harness refuses to do</h2>
+    <div class="cols">
+      <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+        <h3>Synthetic never passes for real</h3>
+        <ul class="rules">
+          <li>Every synthetic file says so: a first line starting with SYNTHETIC, or <code>"synthetic": true</code> on every JSON line.</li>
+          <li>The loader refuses a set whose files disagree, synthetic data under <code>golden/</code>, and unmarked data under <code>synthetic/</code>.</li>
+          <li>Compare refuses to put a synthetic run beside a real one, in either direction.</li>
+          <li>Synthetic baselines live under <code>synthetic/</code> on the <code>calibration</code> branch; a real baseline lookup never reads them.</li>
+        </ul>
+      </div>
+      <div class="panel" style="display:flex;flex-direction:column;gap:12px">
+        <h3>Four gates fail the job; readings only inform</h3>
+        <ol class="rules">
+          <li>Every run exits 0 and its report starts with a well-formed <code>Weight:</code> line.</li>
+          <li>No run reports missing Grade replies.</li>
+          <li>Graded criteria match the prompt's <code>CRITERIA</code> table, both ways.</li>
+          <li>Replay parity holds on every recorded run, or replay refuses outright.</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="status-h">
+    <div class="eyebrow">Status</div>
+    <h2 id="status-h">What is real today, and what waits on data</h2>
+    <div class="panel tbl-wrap">
+      <table class="status">
+        <thead><tr><th>Part</th><th>Status</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td>paperweight.md's Lua</td><td><span class="tag real">real</span></td><td>All seven blocks run unmodified under Lua 5.5, the version Runvil links.</td></tr>
+          <tr><td>Parser and replay arithmetic</td><td><span class="tag real">real</span></td><td>Matches the Lua to the character on 51 fixtures and every live run.</td></tr>
+          <tr><td>Metrics, gates, comment, CI</td><td><span class="tag real">real</span></td><td>Replay job comments on PR #1; the full-run job skips cleanly without gateway secrets.</td></tr>
+          <tr><td>paperweight binary backend</td><td><span class="tag fake">fake only</span></td><td>Exercised against a stand-in on PATH; no gateway is configured.</td></tr>
+          <tr><td>Votes, triage, Analyze prose</td><td><span class="tag sim">simulated</span></td><td>A seeded grader drawn around a latent truth.</td></tr>
+          <tr><td>Reviewer grades</td><td><span class="tag sim">simulated</span></td><td>Three simulated reviewers on 12 real tomd fixture papers.</td></tr>
+          <tr><td>Golden set, model, budget</td><td><span class="tag fake">waiting</span></td><td>The ten papers and 210 grades from Vinnie, the model id, a gateway, and a budget for full runs.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>Data: run <span class="mono" id="f-run"></span>, prompt sha256 <span class="mono" id="f-sha"></span>, synthetic set seeds 20261026 (truth) and 1026 (reviewers).</span>
+    <span>Source: <a href="https://github.com/sykosyber/wg21-paperflow/pull/1">sykosyber/wg21-paperflow pull request #1</a>. Spec: docs/plans/calibration-harness.md. Status: docs/plans/calibration-harness-status.md.</span>
+  </footer>
+</div>
+
+<script type="application/json" id="data">{"criteria":["motivation","audience","prior_art","vehicle","coordination","insufficiency","implementation"],"labels":[[0,"Weightless"],[3,"Light"],[7,"Medium"],[11,"Heavy"],[14,"Supermassive"]],"binary":["implementation"],"reviewers":["SYN-A","SYN-B","SYN-C"],"constants":{"INTER_RULE":"top2","CORROBORATION":2,"STRONG":1.5,"ACCUM_FULL":4.0,"EDGE_WINDOW":0.75,"BINARY":["implementation"],"LABELS":[[0,"Weightless"],[3,"Light"],[7,"Medium"],[11,"Heavy"],[14,"Supermassive"]]},"papers":[{"id":"P0533R9","split":"calibration","title":"constexpr for <cmath> and <cstdlib>","audience":"LWG & CWG","units":["(front matter: title, abstract and anythi...","Abstract","REVISION HISTORY","INTRODUCTION","MOTIVATION & SCOPE","STATE OF THE ART","IMPACT ON THE STANDARD","DESIGN DECISIONS","FUTURE DIRECTIONS","ACKNOWLEDGMENTS","REFERENCES","PROPOSED WORDING"],"samples":3,"runs":[{"v":"000000000222000000000000000000000000000000000000000222000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000111000000000000000111000000000000000111111000000000000000000000000000000000000000000111000000000000000000000","totals":{"top2":"6.00","corroborated":"6.00","accumulate":"6.00","max":"9.00"},"weight":"Weight: Medium (6/14)","rejected":0,"unanimous":84,"pairs":84},{"v":"000000000222000000000000000000000000000000000100000222000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000111000000000000000111000000000000000111111000000000000000000000000000000000000000000111000000000000000000000","totals":{"top2":"6.17","corroborated":"6.00","accumulate":"6.17","max":"9.00"},"weight":"Weight: Medium (6/14)","rejected":0,"unanimous":83,"pairs":84},{"v":"000000000222000000000000000000000000000000000000000222000000000000000000000001000000000000000000222000000000000000000000000000000000000000000000111000000000000100111000000000000000111111000000000000000000000000000000100000000000111000000000000000000000","totals":{"top2":"6.17","corroborated":"6.00","accumulate":"6.33","max":"9.00"},"weight":"Weight: Medium (6/14)","rejected":0,"unanimous":81,"pairs":84}],"revMean":{"motivation":1.0,"audience":1.0,"prior_art":0.6666666666666666,"vehicle":0.0,"coordination":1.0,"insufficiency":1.6666666666666667,"implementation":1.0},"revTotals":[4,7,8]},{"id":"P0957R8","split":"calibration","title":"Proxy: A Polymorphic Programming Library","audience":"LEWG","units":["(front matter: title, abstract and anythi...","1 History","2 Introduction","3 Motivation and scope","4 Considerations and design decisions","5 Technical specifications","6 Acknowledgements","7 Summary"],"samples":3,"runs":[{"v":"000000111000111000000000000000000000000000000000222000222000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"6.00","corroborated":"6.00","accumulate":"6.00","max":"7.00"},"weight":"Weight: Medium (6/14)","rejected":0,"unanimous":56,"pairs":56},{"v":"000000111000111000000000000000000000000000000000222000222000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"6.00","corroborated":"6.00","accumulate":"6.00","max":"7.00"},"weight":"Weight: Medium (6/14)","rejected":0,"unanimous":56,"pairs":56},{"v":"000000111000111000000000000000000000000000000000222000222000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"6.00","corroborated":"6.00","accumulate":"6.00","max":"7.00"},"weight":"Weight: Medium (6/14)","rejected":0,"unanimous":56,"pairs":56}],"revMean":{"motivation":1.0,"audience":0.0,"prior_art":2.0,"vehicle":1.0,"coordination":0.0,"insufficiency":0.3333333333333333,"implementation":2.0},"revTotals":[6,7,6]},{"id":"P1068R11","split":"calibration","title":"Vector API for random number generation","audience":"LWG","units":["(front matter: title, abstract and anythi...","Introduction","Revision history","Motivation and Scope","Libraries and other languages","Problem description","New API","Wording proposal","Past poll results","Design considerations","Implementation experience","Impact on the standard","References","Notices & Disclaimers"],"samples":3,"runs":[{"v":"000000000000000000222000000000000222000000000000000000000000000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111000000000000000000000000000000000000","totals":{"top2":"4.00","corroborated":"4.00","accumulate":"4.00","max":"5.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":98,"pairs":98},{"v":"000000000000000000222000000000000222000000000000000000000000001000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000112000000000000000000000000000000000000","totals":{"top2":"4.67","corroborated":"5.00","accumulate":"4.67","max":"6.00"},"weight":"Weight: Medium (5/14)","rejected":0,"unanimous":95,"pairs":98},{"v":"000000000000000000222000000000000222000000000000000000000000000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000111000000000000000000000000000000000000","totals":{"top2":"4.00","corroborated":"4.00","accumulate":"4.00","max":"5.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":98,"pairs":98}],"revMean":{"motivation":2.0,"audience":0.3333333333333333,"prior_art":1.0,"vehicle":0.0,"coordination":0.0,"insufficiency":0.3333333333333333,"implementation":0.6666666666666666},"revTotals":[5,4,4]},{"id":"P1122R3","split":"calibration","title":"Proposed Wording for Concurrent Data Structures: Read-Copy-Update (RCU)","audience":"","units":["(front matter: title, abstract and anythi...","1. Introduction","2. History/Changes from Previous Release","3. Guidance to Editor","4. Proposed wording","5. Issues Requiring TS Implementation Exp...","6. Acknowledgements","7. References","8. Appendix"],"samples":3,"runs":[{"v":"000000000222000222000000000000000000000000222000000222000000000222000000000000222111000000000000000000000111000000000000000000000000000000000000000000111000000111000222000000000000000000000","totals":{"top2":"10.00","corroborated":"10.00","accumulate":"10.00","max":"10.00"},"weight":"Weight: Heavy (10/14)","rejected":0,"unanimous":63,"pairs":63},{"v":"000000000222000222000000000000000000000000222000000222000000000222000000000000222111000000000000000000000111000000000000000000000000000000000000000000111000000111000222000000000000000000000","totals":{"top2":"10.00","corroborated":"10.00","accumulate":"10.00","max":"10.00"},"weight":"Weight: Heavy (10/14)","rejected":0,"unanimous":63,"pairs":63},{"v":"000000000222000222000000000000000000000000222000000222000000000222000000000000222111000000000000000000000111000000000000000000000000000000000000001000111000000111000222000000000000000000000","totals":{"top2":"10.00","corroborated":"10.00","accumulate":"10.17","max":"10.00"},"weight":"Weight: Heavy (10/14)","rejected":0,"unanimous":62,"pairs":63}],"revMean":{"motivation":1.6666666666666667,"audience":2.0,"prior_art":2.0,"vehicle":1.0,"coordination":0.0,"insufficiency":0.6666666666666666,"implementation":2.0},"revTotals":[8,10,10]},{"id":"P2040R0","split":"calibration","title":"Reflection-based lazy-evaluation","audience":"SG-7","units":["(front matter: title, abstract and anythi...","Abstract","Disclaimer","Building blocks","Proposal: reflection/injection-based hygi...","Comparison with Parametric Expressions","Examples","Expression decomposition and Unit Test fr...","Design points","Comparison of this proposal, Lazy evaluat...","Acknowledgments","References"],"samples":3,"runs":[{"v":"000000000000000222000000222000000000000000000000000000000000000000000000222000000000222000000000000000000000000000222000000000000000000000000000000000000000000000000222222000000000000000000000000000000000000000000000000000000000000000000222000000000000","totals":{"top2":"9.00","corroborated":"9.00","accumulate":"9.00","max":"10.00"},"weight":"Weight: Heavy (9/14)","rejected":0,"unanimous":84,"pairs":84},{"v":"000000000000000222000000222000000000000000000000000000000000000000000000222000000010222000000000000000000000000000222000000000000000000000000000000000000000000000000222222000000000000000000000000000000000000000000000000000000000000000000222000000000000","totals":{"top2":"9.00","corroborated":"9.00","accumulate":"9.00","max":"10.00"},"weight":"Weight: Heavy (9/14)","rejected":0,"unanimous":83,"pairs":84},{"v":"000000000000000221000000222000000000000000000000000000000000000000000000222000000000222000000000000000000000000000222000000000000000000000000000000000000000000000000222222000000000000000000000000000000001000000000000000000000000000001000222000000000000","totals":{"top2":"9.00","corroborated":"9.33","accumulate":"9.00","max":"10.33"},"weight":"Weight: Heavy (9/14)","rejected":0,"unanimous":81,"pairs":84}],"revMean":{"motivation":1.6666666666666667,"audience":0.0,"prior_art":1.6666666666666667,"vehicle":1.0,"coordination":1.6666666666666667,"insufficiency":0.0,"implementation":2.0},"revTotals":[7,8,9]},{"id":"P3290R4","split":"calibration","title":"Integrating Existing Assertions with Contracts","audience":"LEWG","units":["(front matter: title, abstract and anythi...","Abstract","Revision History","1 Introduction","2 Proposals  (part 1 of 2)","2 Proposals  (part 2 of 2)","3 Implementation Experience","4 Wording Changes","5 Conclusion","Acknowledgements","Bibliography"],"samples":3,"runs":[{"v":"111000000000111000000000000000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000000000000000000000000","totals":{"top2":"4.00","corroborated":"4.00","accumulate":"4.00","max":"5.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":77,"pairs":77},{"v":"111000000000111000000000000000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000000000000000000000000","totals":{"top2":"4.00","corroborated":"4.00","accumulate":"4.00","max":"5.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":77,"pairs":77},{"v":"111000000000111000000000000000000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000000000000000000000000","totals":{"top2":"4.00","corroborated":"4.00","accumulate":"4.00","max":"5.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":77,"pairs":77}],"revMean":{"motivation":1.0,"audience":0.0,"prior_art":0.3333333333333333,"vehicle":0.0,"coordination":0.0,"insufficiency":0.3333333333333333,"implementation":2.0},"revTotals":[3,4,4]},{"id":"P3411R5","split":"calibration","title":"any_view","audience":"SG9, LEWG","units":["(front matter: title, abstract and anythi...","1 Revision History","2 Abstract","3 Motivation","4 Design Space and Prior Art","5 Proposed Design","6 Alternative Design for Template Parameters","7 Other Design Considerations","8 Implementation Experience","9 Wording","10 References"],"samples":3,"runs":[{"v":"000000000000000222000222000000000000000222000000000000222000000000000000001000222222000000000000000000000000000000000000010000000000000000000000000000001000000000000000000222100000000000222000000000000000000000000000222000000000000","totals":{"top2":"10.33","corroborated":"10.67","accumulate":"10.33","max":"10.67"},"weight":"Weight: Heavy (10/14)","rejected":0,"unanimous":73,"pairs":77},{"v":"000000000000000222000222000000000000000222000000000000222000000000000000000000222222000000000000000000000000000000001000000000000000000000000000000000000000000000000000000222000000000000222000000000000000000000000000222000000000000","totals":{"top2":"10.17","corroborated":"10.33","accumulate":"10.17","max":"10.33"},"weight":"Weight: Heavy (10/14)","rejected":0,"unanimous":76,"pairs":77},{"v":"000000000000000222000222000000000000000222000000000000122000000000000000000000222222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000000222000000000000000000000000000222000000000000","totals":{"top2":"9.83","corroborated":"10.00","accumulate":"9.83","max":"10.00"},"weight":"Weight: Heavy (10/14)","rejected":0,"unanimous":76,"pairs":77}],"revMean":{"motivation":2.0,"audience":2.0,"prior_art":2.0,"vehicle":0.0,"coordination":0.0,"insufficiency":2.0,"implementation":2.0},"revTotals":[10,10,10]},{"id":"P3556R0","split":"calibration","title":"Input Files Are Source Files","audience":"Core Working Group","units":["(front matter: title, abstract and anythi...","Abstract","Revision History","Introduction","Categories of Files","Proposed Solution","Wording","Acknowledgements","References"],"samples":3,"runs":[{"v":"222000000000000222000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000222000000000000222000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"7.00","corroborated":"7.00","accumulate":"7.00","max":"8.00"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":63,"pairs":63},{"v":"222000000000000222000000000000000000000000000000000000000222000000000000000000000000000000000000000000000000222000000001000222000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"7.00","corroborated":"7.00","accumulate":"7.00","max":"8.00"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":62,"pairs":63},{"v":"222000000000000222000000000000000000000000000000000000010222000000000000000000000000000000000000000000000000222000000000000222000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"7.17","corroborated":"7.00","accumulate":"7.17","max":"8.00"},"weight":"Weight: Medium to Heavy (7/14)","rejected":0,"unanimous":62,"pairs":63}],"revMean":{"motivation":2.0,"audience":0.0,"prior_art":1.3333333333333333,"vehicle":0.0,"coordination":1.6666666666666667,"insufficiency":0.3333333333333333,"implementation":2.0},"revTotals":[7,8,7]},{"id":"P3953R0","split":"calibration","title":"Rename std::runtime_format","audience":"LEWG","units":["(front matter: title, abstract and anythi...","Abstract","Motivation","Proposed Naming: std::dynamicformat","Impact on existing code","References"],"samples":3,"runs":[{"v":"000000111000112000000000000000000000000222000000222000000111111000000000000000000000000000222000000000000000222000000000000000","totals":{"top2":"7.17","corroborated":"7.00","accumulate":"7.17","max":"8.33"},"weight":"Weight: Medium to Heavy (7/14)","rejected":0,"unanimous":41,"pairs":42},{"v":"000000111000111000000000000000000000000222000000222000000110111000000000000000000000000000222000000000000000222000000000000000","totals":{"top2":"6.83","corroborated":"7.00","accumulate":"6.83","max":"8.00"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":41,"pairs":42},{"v":"000000111000111000000000000000000000000222000000222000000111111000000000000000000000000000222000000000000000222000000000000000","totals":{"top2":"7.00","corroborated":"7.00","accumulate":"7.00","max":"8.00"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":42,"pairs":42}],"revMean":{"motivation":1.0,"audience":0.0,"prior_art":2.0,"vehicle":1.0,"coordination":0.0,"insufficiency":1.0,"implementation":1.6666666666666667},"revTotals":[6,7,7]},{"id":"P3978R0","split":"calibration","title":"constant_wrapper should unwrap on call and subscript","audience":"LEWG","units":["(front matter: title, abstract and anythi...","ABSTRACT","1 CHANGELOG","2 STRAW POLLS","3 MOTIVATION","4 DISCUSSION","5 WORDING","A ACKNOWLEDGMENTS","B BIBLIOGRAPHY"],"samples":3,"runs":[{"v":"000000000000222222000000000000222000000000000000000000000111000000111000000000000111000000000000110000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"6.83","corroborated":"7.00","accumulate":"6.83","max":"8.00"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":62,"pairs":63},{"v":"000000000000222222000000000000222000000000000000000000000111000000111000000000000111000000000000111000000000000000000000000000000000000000000000000000000000000000000000000000000222000000000","totals":{"top2":"7.00","corroborated":"7.00","accumulate":"7.00","max":"8.00"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":63,"pairs":63},{"v":"000000000000222222000000000000222000000000000000000000000111000000111000000000000111000000000000111000000000000000000000000000000000000000000000000000000000000000000000000000000221000000000","totals":{"top2":"6.67","corroborated":"6.67","accumulate":"6.67","max":"7.67"},"weight":"Weight: Medium (7/14)","rejected":0,"unanimous":62,"pairs":63}],"revMean":{"motivation":1.6666666666666667,"audience":1.0,"prior_art":0.6666666666666666,"vehicle":1.3333333333333333,"coordination":0.0,"insufficiency":0.0,"implementation":1.6666666666666667},"revTotals":[5,7,7]},{"id":"P4020R0","split":"holdout","title":"Concerns about contract assertions","audience":"EWG","units":["(front matter: title, abstract and anythi...","Contracts in general","P2900 contract assertions","References"],"samples":3,"runs":[{"v":"111111000000000000000000222000000000111000111000000000000000010000000000000000000000","totals":{"top2":"3.17","corroborated":"3.33","accumulate":"3.17","max":"4.33"},"weight":"Weight: Light to Medium (3/14)","rejected":0,"unanimous":27,"pairs":28},{"v":"111111000000000010000000222000000000111000111000000000000000000000000000000000000000","totals":{"top2":"3.17","corroborated":"3.33","accumulate":"3.17","max":"4.33"},"weight":"Weight: Light to Medium (3/14)","rejected":0,"unanimous":27,"pairs":28},{"v":"111111000000000000000000222000000000111000111000000000000000000000000000000000000000","totals":{"top2":"3.00","corroborated":"3.00","accumulate":"3.00","max":"4.00"},"weight":"Weight: Light (3/14)","rejected":0,"unanimous":28,"pairs":28}],"revMean":{"motivation":1.0,"audience":0.0,"prior_art":1.0,"vehicle":0.6666666666666666,"coordination":0.0,"insufficiency":0.0,"implementation":0.0},"revTotals":[2,3,3]},{"id":"P4228R0","split":"holdout","title":"try_*_back For Other Sequence Containers","audience":"LEWG","units":["(front matter: title, abstract and anythi...","Revision History","Introduction","Motivation and Scope","Impact On the Standard","Design Decisions","Technical Specifications","Acknowledgements","References"],"samples":3,"runs":[{"v":"111000000000000000111000000000000000000000000000000000000000000111000111000000000000000000000222000000000000222000000001000000000000000000000000000000000000000000000000000000000000000000000","totals":{"top2":"4.17","corroborated":"4.00","accumulate":"4.17","max":"6.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":62,"pairs":63},{"v":"111000000000000000111000000000000000000000000000000000000000000111000111000000000000000000000222000000000000222000000000000000000000000000000000000000000000000000000000000000000000000000000","totals":{"top2":"4.00","corroborated":"4.00","accumulate":"4.00","max":"6.00"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":63,"pairs":63},{"v":"111000000000000000111000000000000000000000000000000000000000000111000111000000000000000000000222000000000000222000000000000000000000000000000000000000000000000000000000001000000000000000000","totals":{"top2":"4.33","corroborated":"4.33","accumulate":"4.33","max":"6.33"},"weight":"Weight: Medium (4/14)","rejected":0,"unanimous":62,"pairs":63}],"revMean":{"motivation":0.6666666666666666,"audience":0.0,"prior_art":0.6666666666666666,"vehicle":1.3333333333333333,"coordination":0.6666666666666666,"insufficiency":0.0,"implementation":0.3333333333333333},"revTotals":[2,4,5]}],"promptSha":"8b903808","run":"2026-10-26-8b903808-shim-calibrated"}</script>
+<script>
+// --- CORE: the Assess epilogue's arithmetic, ported from calibrate/aggregate.py ---
+const RULES = ["top2", "corroborated", "accumulate", "max"];
+
+function decodeVotes(paper, run, nCrit) {
+  const u = paper.units.length, s = paper.samples, v = run.v;
+  const grid = [];
+  let i = 0;
+  for (let c = 0; c < nCrit; c++) {
+    const row = [];
+    for (let k = 0; k < u; k++) {
+      const cell = [];
+      for (let j = 0; j < s; j++) cell.push(+v[i++]);
+      row.push(cell);
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+function luaMean(t) {
+  if (!t.length) return 0;
+  let total = 0;
+  for (const x of t) total = total + x;
+  return total / t.length;
+}
+
+function ruleGrade(rule, means, k) {
+  let best = 0, strong = 0, total = 0;
+  const ordered = [];
+  for (const m of means) {
+    ordered.push(m);
+    if (m > best) best = m;
+    if (m >= k.strong) strong = strong + 1;
+    total = total + m;
+  }
+  ordered.sort((a, b) => b - a);
+  if (rule === "max") return best;
+  if (rule === "corroborated") {
+    if (means.length < k.corroboration) return best;
+    if (strong >= k.corroboration) return best;
+    return Math.min(best, 1);
+  }
+  if (rule === "accumulate") {
+    if (means.length < 2) return best;
+    return Math.min(2, 2 * total / k.accumFull);
+  }
+  if (!ordered.length) return 0;
+  if (ordered.length === 1) return ordered[0];
+  return (ordered[0] + ordered[1]) / 2;
+}
+
+const luaRound = (x) => Math.floor(x + 0.5);
+
+function labelFor(points, labels) {
+  for (const [top, label] of labels) if (points <= top) return label;
+  return labels[labels.length - 1][1];
+}
+
+function aggregate(criteria, grid, nSamples, k) {
+  const nCrit = criteria.length, nUnits = grid[0].length;
+  const scores = [], shadow = Object.fromEntries(RULES.map((r) => [r, 0])), means = [];
+  let points = 0;
+  for (let c = 0; c < nCrit; c++) {
+    const m = grid[c].map(luaMean);
+    means.push(m);
+    const binary = k.binary.includes(criteria[c]);
+    const score = ruleGrade(binary ? "max" : k.interRule, m, k);
+    for (const r of RULES) shadow[r] = shadow[r] + ruleGrade(binary ? "max" : r, m, k);
+    scores.push(score);
+    points = points + score;
+  }
+  const sampleTotals = [];
+  for (let i = 0; i < nSamples; i++) {
+    let t = 0;
+    for (let c = 0; c < nCrit; c++) {
+      const m = grid[c].map((cell) => (i < cell.length ? cell[i] : 0));
+      t = t + ruleGrade(k.binary.includes(criteria[c]) ? "max" : k.interRule, m, k);
+    }
+    sampleTotals.push(t);
+  }
+  const reached = new Set(sampleTotals.map((t) => labelFor(luaRound(t), k.labels)));
+  reached.add(labelFor(luaRound(points), k.labels));
+  const seen = k.labels.map((l) => l[1]).filter((l) => reached.has(l));
+  const span = seen.length === 1 ? seen[0] : seen.length ? `${seen[0]} to ${seen[seen.length - 1]}` : labelFor(luaRound(points), k.labels);
+  return { scores, means, points, shadow, sampleTotals, span, nUnits,
+           weightLine: `Weight: ${span} (${luaRound(points)}/${2 * nCrit})` };
+}
+
+// --- metrics: same definitions as calibrate/metrics.py; the PRNG is mulberry32, not Python's ---
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const mean = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
+const bias = (p, r) => mean(p.map((x, i) => x - r[i]));
+const mae = (p, r) => mean(p.map((x, i) => Math.abs(x - r[i])));
+function pearson(xs, ys) {
+  if (xs.length < 2) return null;
+  const mx = mean(xs), my = mean(ys);
+  let sxy = 0, sxx = 0, syy = 0;
+  for (let i = 0; i < xs.length; i++) {
+    sxy += (xs[i] - mx) * (ys[i] - my); sxx += (xs[i] - mx) ** 2; syy += (ys[i] - my) ** 2;
+  }
+  if (sxx === 0 || syy === 0) return null;
+  return sxy / Math.sqrt(sxx * syy);
+}
+function nearestRank(sorted, q) {
+  const rank = Math.max(1, Math.ceil(q * sorted.length));
+  return sorted[Math.min(rank, sorted.length) - 1];
+}
+function pairedBootstrap(statCand, statBase, n, resamples = 2000, seed = 20261026) {
+  const rng = mulberry32(seed), vals = [];
+  for (let b = 0; b < resamples; b++) {
+    const idx = Array.from({ length: n }, () => Math.floor(rng() * n));
+    const a = statCand(idx), c = statBase(idx);
+    if (a !== null && c !== null) vals.push(a - c);
+  }
+  vals.sort((x, y) => x - y);
+  const all = Array.from({ length: n }, (_, i) => i);
+  const est = statCand(all) !== null && statBase(all) !== null ? statCand(all) - statBase(all) : null;
+  return { est, low: vals.length ? nearestRank(vals, 0.025) : null, high: vals.length ? nearestRank(vals, 0.975) : null };
+}
+function readingFor(iv, improving) {
+  if (iv.low === null) return "n/a";
+  const [lo, hi] = improving > 0 ? [iv.low, iv.high] : [-iv.high, -iv.low];
+  if (lo > 0) return "better";
+  if (hi < 0) return "worse";
+  return "within noise";
+}
+// --- END CORE ---
+
+
+const D = JSON.parse(document.getElementById("data").textContent);
+const CRIT = D.criteria;
+const BASE_LABELS = D.labels;
+const DEFAULT = { interRule: "top2", strong: D.constants.STRONG, corroboration: D.constants.CORROBORATION,
+  accumFull: D.constants.ACCUM_FULL, binary: D.constants.BINARY, shift: 0 };
+let K = { ...DEFAULT };
+const $ = (id) => document.getElementById(id);
+const fmt = (x, signed) => x === null || x === undefined ? "n/a" : (signed && x >= 0 ? "+" : "") + x.toFixed(2);
+const round2 = (x) => parseFloat(x.toFixed(2));
+
+D.papers.forEach((p) => { p.grids = p.runs.map((r) => decodeVotes(p, r, CRIT.length)); p.revTotal = mean(p.revTotals); });
+
+function labelsWith(shift) {
+  return BASE_LABELS.map(([top, l], i) => [i === 0 || i === BASE_LABELS.length - 1 ? top : top + shift, l]);
+}
+function kOf(s) { return { interRule: s.interRule, strong: s.strong, corroboration: s.corroboration,
+  accumFull: s.accumFull, binary: s.binary, labels: labelsWith(s.shift) }; }
+
+function score(s) {
+  const k = kOf(s);
+  return D.papers.map((p) => {
+    const aggs = p.grids.map((g) => aggregate(CRIT, g, p.samples, k));
+    const total = mean(aggs.map((a) => round2(a.points)));
+    return { p, aggs, total, band: labelFor(luaRound(total), k.labels), revBand: labelFor(luaRound(p.revTotal), k.labels), k };
+  });
+}
+
+// --- loop ---
+const STEPS = [
+  ["Prompt change", "A pull request edits crates/paperweight/paperweight.md. The workflow wakes on any change to the prompt or the harness.", "on:\n  pull_request:\n    paths:\n      - crates/paperweight/paperweight.md"],
+  ["Choose the mode", "The candidate is diffed against the baseline run's prompt. Replay only if every changed line is inside the Assess epilogue and only modelled tunables moved.", "uv run calibrate choose \\\n  --prompt crates/paperweight/paperweight.md \\\n  --from <baseline run>\n# replay\n# only the Assess epilogue's tunables change"],
+  ["Replay", "Recomputes every grade, total and verdict from the votes recorded in the baseline's diagnostics. No model calls; parity on the source run must hold first.", "uv run calibrate replay \\\n  --prompt candidate.md --from <baseline run>"],
+  ["Full run", "On the calibrate label: every paper, three repeats, through the real paperweight binary and the gateway. Papers in parallel, repeats in order, failures kept and counted.", "uv run calibrate full --backend binary \\\n  --model <id> --repeats 3 --jobs 4"],
+  ["Score", "A paper's total is the mean of its completed repeats. Bias, MAE and correlation against the reviewer mean, with bootstrap intervals; calibration and holdout apart.", "uv run calibrate report <run>"],
+  ["Compare", "Four yes/no gates fail the job. MAE, bias and correlation get a reading of better, within noise or worse from paired differences.", "uv run calibrate compare <candidate> <baseline>"],
+  ["Comment", "The comparison is posted on the pull request and updated in place on every push. A synthetic comparison starts with the word SYNTHETIC.", "### Paperweight calibration · replay · 10 papers × 3 repeats\nGates: 4 of 4 pass"],
+  ["Record the baseline", "On merge to master, the accepted run is appended to history.jsonl on the calibration branch. CI never pushes to master.", "uv run calibrate record <run> \\\n  --history <calibration branch checkout>"],
+];
+function renderLoop(active) {
+  const host = $("loop"); host.textContent = "";
+  STEPS.forEach(([name], i) => {
+    if (i > 0) { const a = document.createElement("span"); a.className = "arrow"; a.textContent = i === 3 ? "or" : "→"; a.setAttribute("aria-hidden", "true"); host.append(a); }
+    const b = document.createElement("button"); b.type = "button"; b.className = "step";
+    b.setAttribute("aria-pressed", String(i === active));
+    b.innerHTML = `<i>${i + 1}</i>${name}`;
+    b.onclick = () => renderLoop(i);
+    host.append(b);
+  });
+  $("step-title").textContent = STEPS[active][0];
+  $("step-body").textContent = STEPS[active][1];
+  $("step-cmd").textContent = STEPS[active][2];
+}
+
+// --- lab ---
+function renderControls() {
+  const seg = $("rule"); seg.textContent = "";
+  RULES.forEach((r) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = r;
+    b.setAttribute("aria-pressed", String(K.interRule === r));
+    b.onclick = () => { K.interRule = r; update(); };
+    seg.append(b);
+  });
+  $("strong").value = K.strong; $("strong-o").textContent = K.strong.toFixed(2);
+  $("corr").value = K.corroboration; $("corr-o").textContent = K.corroboration;
+  $("accum").value = K.accumFull; $("accum-o").textContent = K.accumFull.toFixed(1);
+  $("shift").value = K.shift;
+  const labs = labelsWith(K.shift);
+  $("shift-o").textContent = labs.slice(1, -1).map(([t]) => t).join(" / ");
+}
+$("strong").oninput = (e) => { K.strong = +e.target.value; update(); };
+$("corr").oninput = (e) => { K.corroboration = +e.target.value; update(); };
+$("accum").oninput = (e) => { K.accumFull = +e.target.value; update(); };
+$("shift").oninput = (e) => { K.shift = +e.target.value; update(); };
+$("reset").onclick = () => { K = { ...DEFAULT }; update(); };
+
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const [a, v] of Object.entries(attrs)) e.setAttribute(a, v); parent && parent.append(e); return e; }
+
+function renderScatter(cand, base) {
+  const svg = $("scatter"); svg.textContent = "";
+  const L = 40, T = 12, W = 300, H = 280, MAX = 14;
+  const x = (v) => L + (v / MAX) * W, y = (v) => T + H - (v / MAX) * H;
+  for (let t = 0; t <= MAX; t += 2) {
+    el("line", { x1: x(t), x2: x(t), y1: T, y2: T + H, stroke: "var(--grid)", "stroke-width": 1 }, svg);
+    el("line", { x1: L, x2: L + W, y1: y(t), y2: y(t), stroke: "var(--grid)", "stroke-width": 1 }, svg);
+    el("text", { x: x(t), y: T + H + 16, "text-anchor": "middle" }, svg).textContent = t;
+    el("text", { x: L - 8, y: y(t) + 4, "text-anchor": "end" }, svg).textContent = t;
+  }
+  labelsWith(K.shift).slice(0, -1).forEach(([top, lab]) => {
+    el("line", { x1: L, x2: L + W, y1: y(top + 0.5), y2: y(top + 0.5), stroke: "var(--rule)", "stroke-dasharray": "3 4", "stroke-width": 1 }, svg);
+  });
+  el("line", { x1: x(0), y1: y(0), x2: x(MAX), y2: y(MAX), stroke: "var(--muted)", "stroke-width": 1, opacity: 0.6 }, svg);
+  el("text", { x: x(12.2), y: y(13.2), "text-anchor": "middle" }, svg).textContent = "agree";
+  el("text", { x: L + W / 2, y: T + H + 32, "text-anchor": "middle" }, svg).textContent = "reviewer mean total";
+  const yl = el("text", { x: 12, y: T + H / 2, "text-anchor": "middle", transform: `rotate(-90 12 ${T + H / 2})` }, svg); yl.textContent = "paperweight total";
+  cand.forEach((c, i) => {
+    const b = base[i], hold = c.p.split === "holdout";
+    el("circle", { cx: x(c.p.revTotal), cy: y(b.total), r: 4.5, fill: "none", stroke: "var(--muted)", "stroke-width": 1.2 }, svg);
+    if (Math.abs(c.total - b.total) > 0.01)
+      el("line", { class: "mv", x1: x(c.p.revTotal), y1: y(b.total), x2: x(c.p.revTotal), y2: y(c.total), stroke: "var(--accent)", "stroke-width": 1.2, opacity: 0.6 }, svg);
+    const pt = el("circle", { class: "pt", cx: x(c.p.revTotal), cy: y(c.total), r: 5, fill: hold ? "var(--panel)" : "var(--accent)", stroke: "var(--accent)", "stroke-width": 1.8 }, svg);
+    el("title", {}, pt).textContent = `${c.p.id}: paperweight ${c.total.toFixed(2)} (baseline ${b.total.toFixed(2)}), reviewers ${c.p.revTotal.toFixed(2)}`;
+  });
+}
+
+function renderReadings(cand, base) {
+  const cal = cand.map((c, i) => [c, base[i]]).filter(([c]) => c.p.split === "calibration");
+  const pc = cal.map(([c]) => c.total), pb = cal.map(([, b]) => b.total), rev = cal.map(([c]) => c.p.revTotal), n = cal.length;
+  const pick = (xs, idx) => idx.map((i) => xs[i]);
+  const rows = [
+    ["MAE", mae(pb, rev), mae(pc, rev), pairedBootstrap((ix) => mae(pick(pc, ix), pick(rev, ix)), (ix) => mae(pick(pb, ix), pick(rev, ix)), n), -1, false,
+      pairedBootstrap((ix) => mae(pick(pc, ix), pick(rev, ix)), (ix) => mae(pick(pb, ix), pick(rev, ix)), n)],
+    ["Bias", bias(pb, rev), bias(pc, rev), pairedBootstrap((ix) => bias(pick(pc, ix), pick(rev, ix)), (ix) => bias(pick(pb, ix), pick(rev, ix)), n), -1, true,
+      pairedBootstrap((ix) => Math.abs(bias(pick(pc, ix), pick(rev, ix))), (ix) => Math.abs(bias(pick(pb, ix), pick(rev, ix))), n)],
+    ["Correlation", pearson(pb, rev), pearson(pc, rev), pairedBootstrap((ix) => pearson(pick(pc, ix), pick(rev, ix)), (ix) => pearson(pick(pb, ix), pick(rev, ix)), n), +1, false,
+      pairedBootstrap((ix) => pearson(pick(pc, ix), pick(rev, ix)), (ix) => pearson(pick(pb, ix), pick(rev, ix)), n)],
+  ];
+  const out = rows.map(([m, b, c, iv, imp, signed, rIv]) => ({ m, b, c, iv, signed, reading: readingFor(rIv, imp) }));
+  $("readings").innerHTML = "<thead><tr><th>Metric</th><th>Baseline</th><th>Candidate</th><th>Difference (95%)</th><th>Reading</th></tr></thead><tbody>" +
+    out.map((r) => `<tr><td>${r.m}</td><td class="num">${fmt(r.b, r.signed)}</td><td class="num">${fmt(r.c, r.signed)}</td>` +
+      `<td class="num">${fmt(r.iv.est, true)} (${fmt(r.iv.low, true)} to ${fmt(r.iv.high, true)})</td>` +
+      `<td><span class="pill ${r.reading === "within noise" ? "noise" : r.reading}">${r.reading}</span></td></tr>`).join("") + "</tbody>";
+  const changed = cal.filter(([c, b]) => c.band !== b.band);
+  $("bands").textContent = changed.length ? "Bands changed: " + changed.map(([c, b]) => `${c.p.id} ${b.band} to ${c.band} (reviewers: ${c.revBand})`).join("; ") : "Bands changed: none";
+  return { out, changed, cal, n };
+}
+
+function stability(cand) {
+  let pairs = 0, sameBand = 0, nested = 0, sig = [];
+  cand.filter((c) => c.p.split === "calibration").forEach((c) => {
+    const tots = c.aggs.map((a) => round2(a.points));
+    const m = mean(tots); sig.push(Math.sqrt(tots.reduce((s, t) => s + (t - m) ** 2, 0) / (tots.length - 1)));
+    const idx = (span) => { const e = span.split(" to "), names = c.k.labels.map((l) => l[1]); return [names.indexOf(e[0]), names.indexOf(e[e.length - 1])]; };
+    for (let i = 0; i < c.aggs.length; i++) for (let j = i + 1; j < c.aggs.length; j++) {
+      pairs++;
+      if (labelFor(luaRound(tots[i]), c.k.labels) === labelFor(luaRound(tots[j]), c.k.labels)) sameBand++;
+      const a = idx(c.aggs[i].span), b = idx(c.aggs[j].span);
+      if ((a[0] <= b[0] && b[1] <= a[1]) || (b[0] <= a[0] && a[1] <= b[1])) nested++;
+    }
+  });
+  return { sigma: mean(sig), pairs, sameBand, nested };
+}
+
+function renderComment(r, cand) {
+  const st = stability(cand);
+  const isBase = JSON.stringify(K) === JSON.stringify(DEFAULT);
+  const pad = (s, n) => s + " ".repeat(Math.max(0, n - s.length));
+  const lines = [
+    `<span class="syn">SYNTHETIC: this comparison is built from synthetic grades or the Lua shim; its numbers say nothing about paperweight.</span>`,
+    `### Paperweight calibration · replay · ${r.n} papers × 3 repeats · model shim-calibrated`,
+    "Gates: 4 of 4 pass", "",
+    "| Metric | Baseline | Candidate | Difference (95% interval) | Reading |",
+    "| --- | --- | --- | --- | --- |",
+    ...r.out.map((x) => `| ${x.m} | ${fmt(x.b, x.signed)} | ${fmt(x.c, x.signed)} | ${fmt(x.iv.est, true)} (${fmt(x.iv.low, true)} to ${fmt(x.iv.high, true)}) | ${x.reading} |`),
+    "",
+    "Bands changed: " + (r.changed.length ? r.changed.map(([c, b]) => `${c.p.id} ${b.band} to ${c.band} (reviewers: ${c.revBand})`).join("; ") : "none"),
+    `Stability: sigma ${st.sigma.toFixed(2)}, same band ${st.sameBand} of ${st.pairs}, spans nested ${st.nested} of ${st.pairs}`,
+    `Replayed from ${D.run} with no model calls.` + (isBase ? "  (candidate = baseline)" : ""),
+  ];
+  $("comment").innerHTML = lines.map((l) => l.startsWith("<span") ? l : l.replace(/&/g, "&amp;").replace(/</g, "&lt;")).join("\n");
+}
+
+// --- inspector ---
+function renderInspector(cand) {
+  const pi = +$("paper").value, ri = +$("rep").value;
+  const c = cand[pi], p = c.p, a = c.aggs[ri], grid = p.grids[ri];
+  $("weight").textContent = a.weightLine;
+  const heat = $("heat"); heat.textContent = "";
+  const nU = p.units.length;
+  heat.style.gridTemplateColumns = `minmax(110px, auto) repeat(${nU}, minmax(22px, 34px)) auto`;
+  const corner = document.createElement("div"); heat.append(corner);
+  for (let u = 0; u < nU; u++) { const h = document.createElement("div"); h.className = "rowlab"; h.style.justifyContent = "center"; h.style.padding = "0"; h.textContent = u + 1; heat.append(h); }
+  const gh = document.createElement("div"); gh.className = "rowlab"; gh.style.paddingLeft = "8px"; gh.textContent = "grade"; heat.append(gh);
+  CRIT.forEach((crit, ci) => {
+    const lab = document.createElement("div"); lab.className = "rowlab"; lab.textContent = crit + (c.k.binary.includes(crit) ? " · max" : ""); heat.append(lab);
+    grid[ci].forEach((votes, u) => {
+      const m = luaMean(votes);
+      const cell = document.createElement("div"); cell.className = "cell";
+      cell.style.background = `color-mix(in srgb, var(--accent) ${Math.round(m / 2 * 100)}%, var(--paper))`;
+      if (m > 1.2) cell.style.color = "var(--panel)";
+      cell.textContent = m > 0 ? votes.join("") : "";
+      cell.title = `${crit} in section ${u + 1} (${p.units[u]}): votes ${votes.join("/")}, mean ${m.toFixed(2)}`;
+      heat.append(cell);
+    });
+    const g = document.createElement("div"); g.className = "grade"; g.textContent = a.scores[ci].toFixed(2); heat.append(g);
+  });
+  $("units").innerHTML = p.units.map((t, i) => `<span><b>${i + 1}</b>${t.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</span>`).join("");
+}
+
+function update() {
+  renderControls();
+  const cand = score(K), base = score(DEFAULT);
+  renderScatter(cand, base);
+  const r = renderReadings(cand, base);
+  renderComment(r, cand);
+  renderInspector(cand);
+}
+
+// --- mode chooser ---
+const EDITS = [
+  ["INTER_RULE top2 → max", "replay", "only the Assess epilogue's tunables change", [686]],
+  ["LABELS: move the Light/Medium/Heavy edges", "replay", "only the Assess epilogue's tunables change", [424, 430]],
+  ["STRONG 1.5 → 1.0 and CORROBORATION 2 → 3", "replay", "only the Assess epilogue's tunables change", [687, 688]],
+  ["QUOTE_WORDS 40 → 30", "full", "the Assess epilogue changes in a way replay does not model: quote validation decides the votes themselves", [419]],
+  ["Rewrite the top2 arithmetic", "full", "the Assess epilogue changes in a way replay does not model", [731]],
+  ["Edit the audience criterion's text", "full", "a line outside the Assess epilogue's Lua block changes, so the votes themselves may change", [73]],
+  ["Edit the Grade prose", "full", "a line outside the Assess epilogue's Lua block changes, so the votes themselves may change", [1115]],
+  ["Edit the Analyze prose", "full", "a line outside the Assess epilogue's Lua block changes", [1152]],
+];
+const BLOCKS = [
+  ["# Paperweight", 21, 27, "lua"], ["## Assess prologue", 33, 399, "lua"], ["triage prose", 400, 410, "prose"],
+  ["## Assess epilogue", 411, 1082, "epi"], ["### Grade", 1088, 1092, "lua"], ["Grade prose", 1093, 1132, "prose"],
+  ["### Grade epilogue", 1133, 1134, "lua"], ["## Analyze prologue", 1140, 1141, "lua"], ["Analyze prose", 1142, 1163, "prose"],
+  ["## Analyze epilogue", 1164, 1196, "lua"],
+];
+function renderChooser(active) {
+  const host = $("edits"); host.textContent = "";
+  EDITS.forEach(([name, mode], i) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "edit";
+    b.setAttribute("aria-pressed", String(i === active));
+    b.innerHTML = `<span>${name}</span><em class="${mode}">${mode === "replay" ? "replay" : "full run"}</em>`;
+    b.onclick = () => renderChooser(i);
+    host.append(b);
+  });
+  const [, mode, why, lines] = EDITS[active];
+  $("v-mode").textContent = mode === "replay" ? "replay · no model calls" : "full run needed";
+  $("v-mode").style.color = mode === "replay" ? "var(--good)" : "var(--stamp)";
+  $("v-why").textContent = why[0].toUpperCase() + why.slice(1) + ".";
+  const svg = $("pmap"); svg.textContent = "";
+  const TOT = 1197, H = 400, T = 10, X = 70, W = 22;
+  const y = (ln) => T + (ln / TOT) * H;
+  el("rect", { x: X, y: T, width: W, height: H, fill: "var(--paper)", stroke: "var(--rule)" }, svg);
+  BLOCKS.forEach(([name, a, b, kind]) => {
+    const fill = kind === "epi" ? "var(--accent)" : kind === "lua" ? "var(--muted)" : "var(--rule)";
+    el("rect", { x: X, y: y(a), width: W, height: Math.max(2, y(b) - y(a)), fill, opacity: kind === "prose" ? 1 : 0.85 }, svg);
+  });
+  [["setup", 24], ["Assess prologue", 215], ["Assess epilogue", 745], ["Grade", 1110], ["Analyze", 1170]].forEach(([t, ln]) => {
+    el("text", { x: X + W + 8, y: y(ln) + 4 }, svg).textContent = t;
+  });
+  lines.forEach((ln) => {
+    el("line", { x1: X - 26, x2: X + W + 4, y1: y(ln), y2: y(ln), stroke: mode === "replay" ? "var(--good)" : "var(--stamp)", "stroke-width": 2.5 }, svg);
+    el("text", { x: X - 30, y: y(ln) + 4, "text-anchor": "end" }, svg).textContent = `L${ln}`;
+  });
+  el("text", { x: X + W / 2, y: T + H + 8, "text-anchor": "middle" }, svg).textContent = "";
+}
+
+// --- boot ---
+$("paper").innerHTML = D.papers.map((p, i) => `<option value="${i}">${p.id} · ${p.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").slice(0, 52)}${p.split === "holdout" ? " (holdout)" : ""}</option>`).join("");
+$("paper").onchange = () => renderInspector(score(K));
+$("rep").onchange = () => renderInspector(score(K));
+$("f-run").textContent = D.run; $("f-sha").textContent = D.promptSha;
+(() => {
+  const k = kOf(DEFAULT); let ok = 0, n = 0;
+  D.papers.forEach((p) => p.runs.forEach((r, i) => { n++; const a = aggregate(CRIT, p.grids[i], p.samples, k);
+    if (RULES.every((x) => a.shadow[x].toFixed(2) === r.totals[x]) && a.weightLine === r.weight) ok++; }));
+  $("stat-match").textContent = `${ok}/${n}`;
+})();
+renderLoop(1);
+renderChooser(0);
+update();
+</script>

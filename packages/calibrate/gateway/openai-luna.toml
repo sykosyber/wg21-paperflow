@@ -1,0 +1,32 @@
+# Runvil gateway config for calibration runs on OpenAI's gpt-6-luna.
+#
+# The gateway reaches OpenAI through calibrate's loopback proxy
+# (python -m calibrate.openai_proxy), which turns Runvil's "no thinking"
+# request into reasoning_effort "none" and holds the real API key. The
+# endpoint key below is therefore a placeholder, and the gateway's own key
+# comes from RUNVIL_GATEWAY_API_KEY, so this file carries no secret.
+#
+#   uv run python -m calibrate.openai_proxy --port 18090 --key-env OPENAI_API_KEY_V2
+#   runvil-gateway --config packages/calibrate/gateway/openai-luna.toml --no-tray
+#   RUNVIL_GATEWAY_URL=http://127.0.0.1:8081 uv run calibrate full --backend binary --model gpt-6-luna ...
+config-version = 0
+
+[server]
+bind = "127.0.0.1:8081"
+api_key = "${RUNVIL_GATEWAY_API_KEY}"
+trust_loopback = false
+
+[[endpoint]]
+id = "openai-via-proxy"
+protocol = "openai"
+base_url = "http://127.0.0.1:18090/v1"
+api_key = "held-by-the-proxy"
+
+# thinking defaults to "never", which is what paperweight's no-thinking
+# keyword requires; the proxy makes it true upstream.
+[[model]]
+name = "gpt-6-luna"
+description = "OpenAI gpt-6-luna with reasoning off, through calibrate's OpenAI proxy"
+context = 128000
+upstream = "gpt-6-luna"
+endpoints = ["openai-via-proxy"]

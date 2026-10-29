@@ -62,7 +62,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [paperstore, mailing, tomd, whisker, cli, assay, pipeline, agora, preview, cpp-mcp]
+        package: [paperstore, mailing, tomd, whisker, cli, assay, pipeline, agora, preview, cpp-mcp, calibrate]
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4

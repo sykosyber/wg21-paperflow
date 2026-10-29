@@ -1,0 +1,331 @@
+<title>How Paperweight Gets Checked</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one stage. A single animated map of the process, its plain-words caption beside it, then a short "where we are" strip. */
+:root {
+  --bg: #eef1ec; --surface: #f9faf7; --ink: #1d2a23; --muted: #5b6860; --line: #c6cfc5;
+  --flow: #3456c4; --fast: #2b7a57; --full: #b8730f; --stamp: #b3461a;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111714; --surface: #19211c; --ink: #e6ece5; --muted: #9ca8a0; --line: #2e3a33;
+  --flow: #85a0ff; --fast: #5cc492; --full: #eaa64a; --stamp: #f08b4c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111714; --surface: #19211c; --ink: #e6ece5; --muted: #9ca8a0; --line: #2e3a33;
+  --flow: #85a0ff; --fast: #5cc492; --full: #eaa64a; --stamp: #f08b4c; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.6 var(--body); }
+.wrap { max-width: 1100px; margin: 0 auto; padding-block: 40px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 800; margin: 0; line-height: 1.08; text-wrap: balance; letter-spacing: -0.015em; }
+h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); }
+h2 { font-size: 1.6rem; }
+p { margin: 0; max-width: 62ch; }
+.intro { display: flex; flex-direction: column; gap: 14px; }
+.intro p { font-size: 1.15rem; color: var(--muted); }
+.intro b { color: var(--ink); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 20px; align-items: stretch; }
+.canvas { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--ink); font-family: var(--body); }
+.side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.caption { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+.caption .count { font: 700 13px/1 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.caption h2 { font-size: 1.45rem; }
+.caption p { color: var(--ink); }
+.controls { display: flex; gap: 8px; align-items: center; }
+.controls button { font: 700 15px/1 var(--body); border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 11px 16px; cursor: pointer; }
+.controls button.play { background: var(--ink); color: var(--surface); border-color: var(--ink); flex: 1; }
+button:focus-visible { outline: 3px solid var(--flow); outline-offset: 2px; }
+.bar { height: 4px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--flow); }
+
+.steps { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; list-style: none; margin: 0; padding: 0; }
+.steps button { width: 100%; height: 100%; text-align: left; font: 15px/1.3 var(--body); color: var(--muted); background: transparent; border: 0; border-top: 3px solid var(--line); padding: 10px 2px 0; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+.steps button b { font: 800 1.05rem/1 var(--display); }
+.steps button[aria-current="step"] { color: var(--ink); border-top-color: var(--flow); }
+
+/* scene */
+.node { transition: opacity .45s ease; }
+.dim { opacity: 0.22; }
+.box { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
+.lbl { font-size: 19px; font-weight: 700; }
+.sub { font-size: 14px; fill: var(--muted) !important; }
+.wire { fill: none; stroke: var(--line); stroke-width: 3; transition: stroke .45s ease; }
+.wire.lit { stroke: var(--flow); }
+.wire.fast.lit { stroke: var(--fast); }
+.wire.full.lit { stroke: var(--full); }
+.loopwire { stroke-dasharray: 7 8; }
+@keyframes march { to { stroke-dashoffset: -30; } }
+.loopwire.lit { animation: march 1.2s linear infinite; }
+@keyframes wiggle { 0%,100% { transform: translate(0,0) rotate(0); } 50% { transform: translate(-10px,8px) rotate(-6deg); } }
+.writing #pencil { animation: wiggle 0.9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+.thinking #diamond { animation: pulse 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.card-line { opacity: 0; transition: opacity .4s ease; }
+.card-line.show { opacity: 1; }
+.marker { transition: transform 1.6s cubic-bezier(.4,0,.2,1); }
+
+.today { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 20px; }
+.today > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.today h3 { margin: 0; font: 800 1.15rem/1.2 var(--display); }
+.today ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.stamp { align-self: flex-start; font: 800 14px/1 var(--display); letter-spacing: 0.14em; color: var(--stamp); border: 3px double var(--stamp); padding: 8px 12px; border-radius: 4px; transform: rotate(-3deg); }
+.foot { font-size: 14px; color: var(--muted); }
+.foot a { color: var(--flow); }
+
+@media (max-width: 880px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .steps { grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: 14px; }
+  .today { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .writing #pencil, .thinking #diamond, .loopwire.lit { animation: none; }
+  .marker, .node, .card-line { transition: none; }
+}
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <h1>How paperweight gets checked</h1>
+    <p><b>Paperweight</b> is an AI reviewer that reads a WG21 paper and scores how well it argues that its idea belongs in the C++ standard. <b>The calibration harness</b> is a safety net around it: whenever someone changes paperweight's rules, it shows whether the AI's scores moved closer to trusted human reviewers or further away.</p>
+  </header>
+
+  <div class="stage">
+    <div class="canvas">
+      <svg id="scene" viewBox="0 0 1000 560" role="img" aria-labelledby="cap-title cap-text">
+        <defs>
+          <g id="sheet"><rect x="-8" y="-10" width="16" height="20" rx="2" fill="var(--surface)" stroke="currentColor" stroke-width="2"></rect><line x1="-4" y1="-4" x2="4" y2="-4" stroke="currentColor" stroke-width="1.5"></line><line x1="-4" y1="1" x2="4" y2="1" stroke="currentColor" stroke-width="1.5"></line><line x1="-4" y1="6" x2="2" y2="6" stroke="currentColor" stroke-width="1.5"></line></g>
+        </defs>
+
+        <!-- wires -->
+        <path id="w-in" class="wire" d="M175,275 L258,275"></path>
+        <path id="w-fast" class="wire fast" d="M300,236 C300,160 340,140 410,140 L590,140 C640,140 650,210 655,250"></path>
+        <path id="w-full" class="wire full" d="M300,314 C300,390 340,410 410,410 L590,410 C640,410 650,340 655,300"></path>
+        <path id="w-human" class="wire" d="M720,122 L720,232"></path>
+        <path id="w-report" class="wire" d="M785,275 L822,275"></path>
+        <path id="w-shelf" class="wire" d="M900,352 L900,438"></path>
+        <path id="w-loop" class="wire loopwire" d="M822,472 C700,545 380,545 318,312"></path>
+
+        <!-- rulebook -->
+        <g id="n-rulebook" class="node">
+          <path class="box" d="M48,212 L142,212 L172,242 L172,338 L48,338 Z"></path>
+          <path d="M142,212 L142,242 L172,242" fill="none" stroke="var(--ink)" stroke-width="2"></path>
+          <g stroke="var(--muted)" stroke-width="3" stroke-linecap="round"><line x1="66" y1="258" x2="150" y2="258"></line><line x1="66" y1="276" x2="150" y2="276"></line><line x1="66" y1="294" x2="128" y2="294"></line><line x1="66" y1="312" x2="140" y2="312"></line></g>
+          <g id="pencil"><g transform="translate(150,300) rotate(40)"><rect x="-5" y="-34" width="10" height="34" rx="2" fill="var(--full)"></rect><path d="M-5,0 L5,0 L0,11 Z" fill="var(--ink)"></path></g></g>
+          <text class="lbl" x="110" y="368" text-anchor="middle">The rulebook</text>
+          <text class="sub" x="110" y="388" text-anchor="middle">paperweight.md</text>
+        </g>
+
+        <!-- decision -->
+        <g id="n-check" class="node">
+          <g id="diamond"><path class="box" d="M300,236 L340,275 L300,314 L260,275 Z"></path><text x="300" y="283" text-anchor="middle" style="font-size:24px;font-weight:700">?</text></g>
+          <text class="lbl" x="232" y="214" text-anchor="middle">What changed?</text>
+          <text class="sub" x="356" y="196">only the math</text>
+          <text class="sub" x="356" y="362">what the AI reads</text>
+        </g>
+
+        <!-- fast lane -->
+        <g id="n-saved" class="node">
+          <rect class="box" x="415" y="103" width="170" height="74" rx="10" style="stroke:var(--fast)"></rect>
+          <text class="lbl" x="500" y="136" text-anchor="middle">Reuse saved</text>
+          <text class="lbl" x="500" y="158" text-anchor="middle">AI answers</text>
+          <text class="sub" x="500" y="94" text-anchor="middle" style="fill:var(--fast) !important;font-weight:700">FAST LANE · seconds · free</text>
+        </g>
+
+        <!-- full lane -->
+        <g id="n-ai" class="node">
+          <rect class="box" x="415" y="373" width="170" height="74" rx="10" style="stroke:var(--full)"></rect>
+          <text class="lbl" x="500" y="406" text-anchor="middle">Ask the AI</text>
+          <text class="lbl" x="500" y="428" text-anchor="middle">again</text>
+          <circle cx="585" cy="373" r="17" fill="var(--full)"></circle><text x="585" y="379" text-anchor="middle" style="fill:var(--surface);font-weight:700;font-size:15px">×3</text>
+          <text class="sub" x="500" y="472" text-anchor="middle" style="fill:var(--full) !important;font-weight:700">FULL LANE · minutes · uses AI calls</text>
+        </g>
+
+        <!-- humans -->
+        <g id="n-human" class="node">
+          <rect class="box" x="640" y="36" width="160" height="84" rx="10" style="stroke:var(--flow)"></rect>
+          <g fill="var(--flow)"><circle cx="680" cy="64" r="9"></circle><path d="M666,92 Q680,74 694,92 Z"></path><circle cx="720" cy="64" r="9"></circle><path d="M706,92 Q720,74 734,92 Z"></path><circle cx="760" cy="64" r="9"></circle><path d="M746,92 Q760,74 774,92 Z"></path></g>
+          <text class="sub" x="720" y="112" text-anchor="middle">3 human reviewers</text>
+          <text class="lbl" x="720" y="24" text-anchor="middle">10 papers, graded by people</text>
+        </g>
+
+        <!-- compare -->
+        <g id="n-compare" class="node">
+          <rect class="box" x="655" y="232" width="130" height="86" rx="10"></rect>
+          <line x1="672" y1="292" x2="768" y2="292" stroke="var(--muted)" stroke-width="2"></line>
+          <g stroke="var(--muted)" stroke-width="2"><line x1="672" y1="287" x2="672" y2="297"></line><line x1="720" y1="287" x2="720" y2="297"></line><line x1="768" y1="287" x2="768" y2="297"></line></g>
+          <g id="m-human" class="marker"><path d="M736,266 l7,14 l-14,0 Z" fill="var(--flow)"></path></g>
+          <g id="m-ai" class="marker"><circle cx="694" cy="276" r="7" fill="var(--ink)"></circle></g>
+          <text class="sub" x="720" y="312" text-anchor="middle">AI vs people</text>
+          <text class="lbl" x="720" y="345" text-anchor="middle">Compare</text>
+        </g>
+
+        <!-- report -->
+        <g id="n-report" class="node">
+          <rect class="box" x="826" y="198" width="150" height="154" rx="10"></rect>
+          <rect x="826" y="198" width="150" height="32" rx="10" fill="var(--ink)"></rect>
+          <rect x="826" y="216" width="150" height="14" fill="var(--ink)"></rect>
+          <text x="901" y="220" text-anchor="middle" style="fill:var(--surface);font-weight:700;font-size:15px">Report on the PR</text>
+          <g class="card-line" id="cl1"><text x="840" y="258" style="font-size:15px">✓ safety checks</text></g>
+          <g class="card-line" id="cl2"><text x="840" y="284" style="font-size:15px">accuracy:</text><text x="840" y="304" style="font-size:15px;font-weight:700;fill:var(--fast)">better</text></g>
+          <g class="card-line" id="cl3"><text x="840" y="330" style="font-size:15px">steadiness: </text><text x="924" y="330" style="font-size:15px;font-weight:700;fill:var(--muted)">same</text></g>
+          <text class="sub" x="901" y="372" text-anchor="middle">a person decides</text>
+        </g>
+
+        <!-- reference -->
+        <g id="n-shelf" class="node">
+          <rect class="box" x="826" y="440" width="150" height="64" rx="10"></rect>
+          <g fill="var(--muted)"><rect x="842" y="454" width="10" height="36" rx="2"></rect><rect x="856" y="458" width="10" height="32" rx="2"></rect><rect x="870" y="452" width="10" height="38" rx="2"></rect></g>
+          <text class="lbl" x="930" y="470" text-anchor="middle" style="font-size:16px">New</text>
+          <text class="lbl" x="930" y="490" text-anchor="middle" style="font-size:16px">reference</text>
+          <text class="sub" x="560" y="530" text-anchor="middle">the next change is compared against this one</text>
+        </g>
+
+        <g id="tokens"></g>
+      </svg>
+    </div>
+
+    <div class="side">
+      <div class="caption" aria-live="polite">
+        <span class="count" id="cap-count"></span>
+        <h2 id="cap-title"></h2>
+        <p id="cap-text"></p>
+      </div>
+      <div class="bar" aria-hidden="true"><i id="bar"></i></div>
+      <div class="controls">
+        <button type="button" id="prev" aria-label="Previous step">←</button>
+        <button type="button" id="play" class="play">Pause</button>
+        <button type="button" id="next" aria-label="Next step">→</button>
+      </div>
+    </div>
+  </div>
+
+  <ol class="steps" id="steps" aria-label="All steps"></ol>
+
+  <section class="today" aria-labelledby="today-h">
+    <div>
+      <h2 id="today-h">Where it stands today</h2>
+      <p>The whole loop is built and runs on every pull request. The real test papers and human grades haven't arrived yet, so for now it runs on practice data: real WG21 papers, pretend reviewer grades, and a stand-in for the AI.</p>
+      <span class="stamp">SYNTHETIC</span>
+      <p class="foot">Every result made from practice data carries that stamp, so it can never be mistaken for a real finding about paperweight.</p>
+    </div>
+    <div>
+      <h3>What it guarantees</h3>
+      <ul>
+        <li>Rule changes get checked against the same papers every time.</li>
+        <li>Small math tweaks are checked for free, in seconds.</li>
+        <li>It tells real improvement apart from normal wobble.</li>
+        <li>Practice results and real results never mix.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What's next</h3>
+      <ul>
+        <li>Get the 10 real papers and the reviewers' grades.</li>
+        <li>Connect the AI service so full runs can happen.</li>
+        <li>Make the first real run and save it as the reference.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="foot">Built in <a href="https://github.com/sykosyber/wg21-paperflow/pull/1">sykosyber/wg21-paperflow, pull request #1</a>. A detailed, hands-on version of this page exists for people who want the numbers.</p>
+</div>
+
+<script>
+const STEPS = [
+  { title: "Someone changes the rulebook", text: "Paperweight follows a written rulebook that says how to score a paper. Any edit to it, even a small one, can change the scores it gives.",
+    on: ["n-rulebook"], wires: [], scene: "writing" },
+  { title: "What kind of change is it?", text: "The harness compares the new rulebook with the last approved one. If only the scoring math changed, it can take the fast lane. If anything the AI reads changed, it has to take the full lane.",
+    on: ["n-rulebook", "n-check"], wires: [["w-in", 3, "var(--flow)"]], scene: "thinking" },
+  { title: "Fast lane: reuse saved answers", text: "The AI's answers from the last run were saved. The harness simply re-scores them with the new math. No AI is called, so it takes seconds and costs nothing.",
+    on: ["n-check", "n-saved", "n-compare"], wires: [["w-fast", 4, "var(--fast)"]] },
+  { title: "Full lane: ask the AI again", text: "If the change affects what the AI reads, each test paper goes back through the AI three times, which also shows how steady its scores are. This costs AI calls, so a maintainer starts it on purpose.",
+    on: ["n-check", "n-ai", "n-compare"], wires: [["w-full", 4, "var(--full)"]] },
+  { title: "Compare with human reviewers", text: "Ten papers were graded by three people. The harness checks whether the AI's new scores land closer to theirs or further away, and whether the shift is bigger than the AI's normal run-to-run wobble.",
+    on: ["n-human", "n-compare"], wires: [["w-human", 3, "var(--flow)"]], scene: "compare" },
+  { title: "A report card on the pull request", text: "The result is posted right on the pull request: a few yes/no safety checks, then a plain verdict for each measure: better, no real change, or worse. A person decides whether to merge.",
+    on: ["n-compare", "n-report"], wires: [["w-report", 2, "var(--flow)"]], scene: "report" },
+  { title: "It becomes the new reference", text: "Once the change is approved and merged, its results are saved. The next rule change will be measured against this one, so a slow slide in quality gets noticed.",
+    on: ["n-report", "n-shelf", "n-check"], wires: [["w-shelf", 2, "var(--flow)"], ["w-loop", 3, "var(--muted)"]], scene: "loop" },
+];
+const STEP_MS = 7000;
+const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (id) => document.getElementById(id);
+const scene = $("scene"), tokenLayer = $("tokens");
+const NODES = ["n-rulebook", "n-check", "n-saved", "n-ai", "n-human", "n-compare", "n-report", "n-shelf"];
+const WIRES = ["w-in", "w-fast", "w-full", "w-human", "w-report", "w-shelf", "w-loop"];
+let current = 0, playing = !reduce, started = performance.now(), raf = 0, tokens = [];
+
+$("steps").innerHTML = STEPS.map((s, i) => `<li><button type="button" data-i="${i}"><b>${i + 1}</b>${s.title}</button></li>`).join("");
+$("steps").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) go(+b.dataset.i, true); });
+
+function go(i, byHand) {
+  current = (i + STEPS.length) % STEPS.length;
+  started = performance.now();
+  if (byHand && reduce) playing = false;
+  const s = STEPS[current];
+  $("cap-count").textContent = `Step ${current + 1} of ${STEPS.length}`;
+  $("cap-title").textContent = s.title;
+  $("cap-text").textContent = s.text;
+  document.querySelectorAll("#steps button").forEach((b, j) => { if (j === current) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current"); });
+  NODES.forEach((n) => $(n).classList.toggle("dim", !s.on.includes(n)));
+  const lit = s.wires.map((w) => w[0]);
+  WIRES.forEach((w) => $(w).classList.toggle("lit", lit.includes(w)));
+  scene.classList.remove("writing", "thinking", "compare", "report", "loop");
+  if (s.scene) scene.classList.add(s.scene);
+  // the comparison: AI marker slides toward the people
+  $("m-ai").style.transform = s.scene === "compare" || current > 4 ? "translateX(30px)" : "translateX(0)";
+  ["cl1", "cl2", "cl3"].forEach((id, k) => {
+    const el = $(id);
+    el.classList.remove("show");
+    if (current === 5) setTimeout(() => current === 5 && el.classList.add("show"), reduce ? 0 : 500 + k * 700);
+    else if (current > 5) el.classList.add("show");
+  });
+  // moving sheets
+  tokenLayer.textContent = "";
+  tokens = [];
+  s.wires.forEach(([id, n, color]) => {
+    const path = $(id), len = path.getTotalLength();
+    for (let k = 0; k < n; k++) {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      g.setAttribute("href", "#sheet");
+      g.style.color = color;
+      tokenLayer.append(g);
+      tokens.push({ g, path, len, offset: k / n });
+    }
+  });
+  $("play").textContent = playing ? "Pause" : "Play";
+  draw(performance.now());
+}
+
+function draw(now) {
+  const t = (now - started) / STEP_MS;
+  tokens.forEach((k) => {
+    const f = reduce ? k.offset + 0.5 / (tokens.length || 1) : ((t * 2.2 + k.offset) % 1);
+    const p = k.path.getPointAtLength(k.len * (f % 1));
+    k.g.setAttribute("transform", `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
+  });
+  $("bar").style.width = `${Math.min(100, t * 100).toFixed(1)}%`;
+}
+
+function tick(now) {
+  if (playing && now - started >= STEP_MS) go(current + 1);
+  if (!reduce) draw(now);
+  raf = requestAnimationFrame(tick);
+}
+
+$("play").onclick = () => { playing = !playing; if (playing) started = performance.now(); $("play").textContent = playing ? "Pause" : "Play"; };
+$("prev").onclick = () => go(current - 1, true);
+$("next").onclick = () => go(current + 1, true);
+
+go(0);
+raf = requestAnimationFrame(tick);
+</script>

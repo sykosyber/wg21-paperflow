@@ -1,0 +1,84 @@
+{"criterion": "motivation", "paper": "P0533R9", "sections": {"4": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "audience", "paper": "P0533R9", "sections": {"6": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "prior_art", "paper": "P0533R9", "sections": {"9": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P0533R9", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "coordination", "paper": "P0533R9", "sections": {"1": 1, "7": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "insufficiency", "paper": "P0533R9", "sections": {"1": 1, "2": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "implementation", "paper": "P0533R9", "sections": {"5": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "motivation", "paper": "P0957R8", "sections": {"3": 1, "5": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "audience", "paper": "P0957R8", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P0957R8", "sections": {"1": 2, "3": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "vehicle", "paper": "P0957R8", "sections": {"1": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P0957R8", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P0957R8", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P0957R8", "sections": {"5": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P1068R11", "sections": {"12": 2, "7": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "audience", "paper": "P1068R11", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P1068R11", "sections": {"7": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P1068R11", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "coordination", "paper": "P1068R11", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P1068R11", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P1068R11", "sections": {"2": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "motivation", "paper": "P1122R3", "sections": {"4": 2, "6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "audience", "paper": "P1122R3", "sections": {"6": 2, "9": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "prior_art", "paper": "P1122R3", "sections": {"4": 2, "9": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "vehicle", "paper": "P1122R3", "sections": {"1": 1, "9": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P1122R3", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P1122R3", "sections": {"6": 1, "9": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "implementation", "paper": "P1122R3", "sections": {"2": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P2040R0", "sections": {"6": 2, "9": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "audience", "paper": "P2040R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P2040R0", "sections": {"1": 2, "5": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "vehicle", "paper": "P2040R0", "sections": {"3": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P2040R0", "sections": {"8": 2, "9": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "insufficiency", "paper": "P2040R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P2040R0", "sections": {"8": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P3290R4", "sections": {"1": 1, "5": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "audience", "paper": "P3290R4", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P3290R4", "sections": {"2": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P3290R4", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "coordination", "paper": "P3290R4", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P3290R4", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P3290R4", "sections": {"1": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P3411R5", "sections": {"6": 2, "8": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "audience", "paper": "P3411R5", "sections": {"3": 2, "8": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "prior_art", "paper": "P3411R5", "sections": {"5": 2, "6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "vehicle", "paper": "P3411R5", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "coordination", "paper": "P3411R5", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P3411R5", "sections": {"3": 2, "8": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "implementation", "paper": "P3411R5", "sections": {"7": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P3556R0", "sections": {"1": 2, "6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "audience", "paper": "P3556R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P3556R0", "sections": {"2": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P3556R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "coordination", "paper": "P3556R0", "sections": {"1": 2, "6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "insufficiency", "paper": "P3556R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P3556R0", "sections": {"6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P3953R0", "sections": {"3": 1, "5": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "audience", "paper": "P3953R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P3953R0", "sections": {"2": 2, "5": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "vehicle", "paper": "P3953R0", "sections": {"2": 1, "3": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P3953R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P3953R0", "sections": {"1": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "implementation", "paper": "P3953R0", "sections": {"1": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P3978R0", "sections": {"5": 2, "6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "audience", "paper": "P3978R0", "sections": {"2": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "prior_art", "paper": "P3978R0", "sections": {"2": 1, "5": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P3978R0", "sections": {"1": 1, "6": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P3978R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P3978R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P3978R0", "sections": {"6": 2}, "synthetic": true, "truth": 2.0}
+{"criterion": "motivation", "paper": "P4020R0", "sections": {"1": 1, "2": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "audience", "paper": "P4020R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P4020R0", "sections": {"1": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P4020R0", "sections": {"1": 1, "3": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P4020R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "insufficiency", "paper": "P4020R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P4020R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "motivation", "paper": "P4228R0", "sections": {"1": 1, "7": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "audience", "paper": "P4228R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "prior_art", "paper": "P4228R0", "sections": {"4": 1, "6": 1}, "synthetic": true, "truth": 1.0}
+{"criterion": "vehicle", "paper": "P4228R0", "sections": {"5": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "coordination", "paper": "P4228R0", "sections": {"1": 2}, "synthetic": true, "truth": 1.0}
+{"criterion": "insufficiency", "paper": "P4228R0", "sections": {}, "synthetic": true, "truth": 0.0}
+{"criterion": "implementation", "paper": "P4228R0", "sections": {}, "synthetic": true, "truth": 0.0}

@@ -1,0 +1,5 @@
+# Paper markdown, grades and recorded fixtures are pinned by sha256 or
+# compared byte for byte, so git must never rewrite their line endings.
+data/** -text
+tests/fixtures/** -text
+examples/** -text

@@ -1,0 +1,423 @@
+<title>What the Checks Found</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: one calm reading column. Seven numbered steps, each a plain headline, one picture drawn to scale, and a "how to read it" note beside the picture. */
+:root {
+  --bg: #f4f6f2; --surface: #ffffff; --ink: #1d2a23; --muted: #5d6a62; --line: #d5dcd3; --faint: #e7ece5;
+  --real: #2b7a57; --proxy: #3456c4; --warn: #b8730f; --alarm: #b3461a;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111714; --surface: #18201b; --ink: #e6ece5; --muted: #9ca8a0; --line: #2e3a33; --faint: #222c26;
+  --real: #5cc492; --proxy: #85a0ff; --warn: #eaa64a; --alarm: #f08b4c; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111714; --surface: #18201b; --ink: #e6ece5; --muted: #9ca8a0; --line: #2e3a33; --faint: #222c26;
+  --real: #5cc492; --proxy: #85a0ff; --warn: #eaa64a; --alarm: #f08b4c; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 17px/1.6 var(--body); }
+.page { max-width: 780px; margin: 0 auto; padding-block: 48px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 64px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 800; margin: 0; line-height: 1.1; text-wrap: balance; letter-spacing: -0.015em; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.3rem); }
+h2 { font-size: clamp(1.45rem, 3.6vw, 1.85rem); }
+h3 { font-size: 1.05rem; line-height: 1.25; }
+p { margin: 0; max-width: 64ch; }
+a { color: var(--proxy); }
+b { font-weight: 700; }
+.num { font-variant-numeric: tabular-nums; }
+
+header { display: flex; flex-direction: column; gap: 16px; }
+.kicker { font: 700 13px/1.4 var(--body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 1.15rem; color: var(--muted); }
+.key { display: flex; flex-wrap: wrap; gap: 10px 18px; font-size: 15px; color: var(--muted); }
+.key span { display: inline-flex; align-items: center; gap: 8px; }
+
+.tag { display: inline-block; font: 700 12px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px; border: 1.5px solid currentColor; }
+.tag.real { color: var(--real); } .tag.proxy { color: var(--proxy); } .tag.next { color: var(--muted); }
+
+.step { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 0 18px; }
+.step-n { font: 800 1.6rem/1 var(--display); color: var(--muted); padding-top: 4px; font-variant-numeric: tabular-nums; }
+.step-body { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.step-head { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.point { font-size: 1.1rem; }
+
+.fig { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.scroll { overflow-x: auto; }
+.scroll svg { min-width: 540px; }
+svg { display: block; width: 100%; height: auto; }
+svg text { fill: var(--ink); font-family: var(--body); }
+svg .m { fill: var(--muted); }
+.read { font-size: 15px; color: var(--muted); border-top: 1px solid var(--faint); padding-top: 12px; }
+.read b { color: var(--ink); }
+
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.flow > div { flex: 1 1 110px; background: var(--bg); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+.flow .op { flex: 0 0 auto; background: none; padding: 12px 0; justify-content: center; font: 800 1.3rem/1 var(--display); color: var(--muted); }
+.flow .big { font: 800 1.6rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.flow small { font-size: 13px; color: var(--muted); line-height: 1.35; }
+.flow .total { background: var(--real); color: var(--surface); }
+.flow .total small { color: var(--surface); opacity: 0.85; }
+
+.facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.facts div { display: flex; flex-direction: column; gap: 2px; }
+.facts .big { font: 800 1.4rem/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.facts small { font-size: 13px; color: var(--muted); }
+
+.toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; align-self: flex-start; }
+.toggle button { font: 700 14px/1 var(--body); color: var(--muted); background: none; border: 0; border-radius: 999px; padding: 9px 14px; cursor: pointer; }
+.toggle button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+button:focus-visible { outline: 3px solid var(--proxy); outline-offset: 2px; }
+
+.waffles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.waffles.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.waffle { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.waffle .label { font-size: 14px; font-weight: 700; }
+.waffle .count { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.waffle .count b { font: 800 1.35rem/1 var(--display); color: var(--ink); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+.sw.box { border-radius: 2px; background: none; border: 2px dashed var(--ink); }
+
+.setup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.setup div { background: var(--bg); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+.setup .who { font: 800 1.05rem/1.2 var(--display); }
+.setup small { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.loop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 15px; }
+.loop span { background: var(--bg); border-radius: 999px; padding: 6px 12px; }
+.loop i { font-style: normal; color: var(--muted); }
+
+.methods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.methods > div { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.methods ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 15px; }
+.verdict { font-size: 15px; font-weight: 700; }
+.verdict.bad { color: var(--alarm); } .verdict.good { color: var(--real); }
+
+table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--faint); }
+th { font-size: 13px; color: var(--muted); font-weight: 700; }
+td.bad { color: var(--alarm); font-weight: 700; } td.good { color: var(--real); font-weight: 700; }
+
+.road { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.road div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 6px; }
+.road div:last-child { border-color: var(--real); border-width: 2px; }
+.road small { font-size: 13px; color: var(--muted); font-weight: 700; }
+.foot { font-size: 14px; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .step { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .waffles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .setup, .methods, .road { grid-template-columns: minmax(0, 1fr); }
+  .flow .op { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) { .dot { transition: fill .25s ease; } }
+</style>
+
+<main class="page">
+  <header>
+    <span class="kicker">Part 2 of 2 · <a href="https://claude.ai/artifact/YV2ybJnio6YR6RYFqTrJ5Z">Part 1: how paperweight gets checked</a></span>
+    <h1>What the checks found</h1>
+    <p class="lede">For the first time we ran paperweight's real engine with a real AI, and tested the harness's maths on 11,521 papers' worth of real human reviews. Here is what came back, one step at a time.</p>
+    <div class="key">
+      <span><span class="tag real">Real run</span> paperweight on OpenAI's gpt-6-luna</span>
+      <span><span class="tag proxy">Proxy study</span> ICLR 2025 reviews, no AI involved</span>
+    </div>
+  </header>
+
+  <section class="step" aria-labelledby="s1">
+    <div class="step-n">1</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag real">Real run</span><h2 id="s1">One run is hundreds of small questions</h2></div>
+      <p class="point">We graded 12 papers, 3 times each. That took <b class="num">6,351</b> AI calls, because paperweight never asks "what's this paper worth?" in one go. It splits the paper up and asks small questions.</p>
+      <div class="fig">
+        <h3>One run of P0533R9</h3>
+        <div class="flow" aria-label="Calls for one run of P0533R9">
+          <div><span class="big">12</span><small>sections, split at the paper's headings</small></div>
+          <div class="op">×</div>
+          <div><span class="big">7</span><small>criteria asked about each section</small></div>
+          <div class="op">×</div>
+          <div><span class="big">3</span><small>times each question is asked, then averaged</small></div>
+          <div class="op">+</div>
+          <div><span class="big">2</span><small>"is it a proposal?" and the closing write-up</small></div>
+          <div class="op">=</div>
+          <div class="total"><span class="big">254</span><small>calls per run, so 762 for 3 runs</small></div>
+        </div>
+        <p class="read"><b>How to read it:</b> longer papers have more sections, so they cost more calls. P1068R11 has 14 sections; P3953R0 has 6.</p>
+      </div>
+      <div class="fig">
+        <h3>AI calls per paper, all 3 runs together</h3>
+        <div class="scroll"><svg id="calls" viewBox="0 0 680 380" role="img" aria-label="AI calls per paper, from 888 for P1068R11 down to 6 for P4020R0, totalling 6,351"></svg></div>
+        <div class="legend"><span><i class="sw" style="background:var(--real)"></i>graded in all 3 runs</span><span><i class="sw" style="background:var(--warn)"></i>at least one run said "not a proposal"</span></div>
+        <p class="read"><b>Why P4020R0 is only 6:</b> the AI said "not a proposal" in all 3 runs. Then paperweight skips the grading, so each run is just the 2 bookend calls.</p>
+      </div>
+      <div class="facts">
+        <div><span class="big">7 min 23 s</span><small>for all 36 runs</small></div>
+        <div><span class="big">about $1.10</span><small>at list price</small></div>
+        <div><span class="big">0</span><small>runs failed</small></div>
+        <div><span class="big">36 of 36</span><small>runs where the harness's maths matched the engine</small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s2">
+    <div class="step-n">2</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag real">Real run</span><h2 id="s2">The same paper scores a little differently each time</h2></div>
+      <p class="point">The AI has some randomness, so three runs of one paper give three slightly different totals. Usually that doesn't matter. When a paper sits near a band edge, it can tip it into a different band.</p>
+      <div class="fig">
+        <h3>Three runs of five papers, total out of 14</h3>
+        <div class="scroll"><svg id="wobble" viewBox="0 0 680 330" role="img" aria-label="Totals of three runs for five papers on a scale from 0 to 14 with band zones"></svg></div>
+        <div class="legend"><span><i class="sw" style="background:var(--real)"></i>all 3 runs in one band</span><span><i class="sw" style="background:var(--alarm)"></i>runs land in two bands</span></div>
+        <p class="read"><b>How to read it:</b> each dot is one run. The shaded zones are paperweight's bands. P2040R0 scored 8.00 (Heavy) once and 6.33 and 6.67 (Medium) twice. Across all papers, repeat runs agreed on the band 20 of 24 times. paperweight's own notes recorded 9 of 10 on the model it was tuned on.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s3">
+    <div class="step-n">3</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag real">Real run</span><h2 id="s3">Sometimes it won't grade a paper at all</h2></div>
+      <p class="point">Before grading, the AI decides whether the paper is a proposal. For two papers it changed its mind between runs, so the same paper sometimes got a score and sometimes got nothing.</p>
+      <div class="fig">
+        <div class="scroll"><svg id="triage" viewBox="0 0 680 200" role="img" aria-label="P3411R5 and P3556R0 outcomes across three runs"></svg></div>
+        <p class="read"><b>What changed:</b> every report now flags a paper like this and leaves it out of the accuracy numbers, with the reason. P4020R0, a position paper, was "not a proposal" all 3 times, which is a fair call.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s4">
+    <div class="step-n">4</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag proxy">Proxy study</span><h2 id="s4">How we tested the harness's own maths</h2></div>
+      <p class="point">The harness's job is to say whether a rulebook change made scores <b>better</b>, <b>worse</b> or <b>no real change</b>. To check that verdict, we needed cases where we already know the right answer. Real human reviews give us those.</p>
+      <div class="fig">
+        <h3>Every ICLR 2025 paper has several human reviewers</h3>
+        <div class="setup">
+          <div><span class="who">"Old version"</span><small>One reviewer's score, standing in for paperweight before a change.</small></div>
+          <div><span class="who">"New version"</span><small>The average of two reviewers. It lands 19% closer to the panel, so it really is better.</small></div>
+          <div><span class="who">Answer key</span><small>The average of the remaining reviewers, standing in for the human grades.</small></div>
+        </div>
+        <div class="loop" aria-label="The test loop">
+          <span>pick 10 random papers</span><i>→</i><span>ask the harness: better, worse or no change?</span><i>→</i><span>repeat 200 times</span><i>→</i><span>count the answers</span>
+        </div>
+        <p class="read"><b>Why this works:</b> we know the new version is better, so the right answer is always "better". We then do the same with 20, 40 and 80 papers. "Error" here means how many points a score misses the answer key by, on average.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s5">
+    <div class="step-n">5</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag proxy">Proxy study</span><h2 id="s5">With 10 papers, a real improvement is usually missed</h2></div>
+      <p class="point">Each grid below is 200 tries. A filled dot is a try where the harness correctly said "better". An empty dot is a try where it said "no real change" and missed the improvement.</p>
+      <div class="fig">
+        <div class="toggle" role="group" aria-label="Size of the improvement">
+          <button type="button" id="cut19" aria-pressed="true">19% smaller error</button>
+          <button type="button" id="cut25" aria-pressed="false">25% smaller error</button>
+        </div>
+        <div class="waffles" id="power"></div>
+        <div class="legend"><span><i class="sw" style="background:var(--proxy)"></i>said "better" (right)</span><span><i class="sw" style="background:var(--line)"></i>said "no real change" (missed it)</span></div>
+        <p class="read"><b>How to read it:</b> today we have 10 graded papers, the first grid. A real 19% improvement gets noticed in only 16 of 200 tries. With 40 papers it is caught about 2 times in 5; with 80, most of the time. A bigger improvement (switch to 25%) is easier to spot. This is why we ask Vinnie for about 40 graded papers.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s6">
+    <div class="step-n">6</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag proxy">Proxy study</span><h2 id="s6">The old check cried wolf, so we replaced it</h2></div>
+      <p class="point">Now the opposite test. "Old" is one reviewer and "new" is a different reviewer: neither is better, so the right answer is always "no real change". Any "better" or "worse" is a false alarm.</p>
+      <div class="fig">
+        <h3>200 tries on 10 papers</h3>
+        <div class="waffles two" id="alarms"></div>
+        <div class="legend"><span><i class="sw" style="background:var(--alarm)"></i>false alarm</span><span><i class="sw box"></i>the allowance: 5%, or 10 of 200</span></div>
+        <p class="read"><b>Where 5% comes from:</b> any check that separates real changes from luck is allowed to be fooled sometimes. The standard in science, and the setting the spec uses, is at most 5% of the time: 1 in 20. The old check went over that allowance on 10 papers. The new one stays inside it.</p>
+      </div>
+      <div class="fig">
+        <h3>How each check decides</h3>
+        <div class="methods">
+          <div>
+            <h3>Old: bootstrap interval</h3>
+            <ol>
+              <li>Treat the 10 papers as the whole world.</li>
+              <li>Draw 10 of them at random, allowing repeats, and average the old-vs-new difference.</li>
+              <li>Do that 2,000 times and keep the middle 95%.</li>
+              <li>If zero is outside that range, call it a real change.</li>
+            </ol>
+            <span class="verdict bad">The flaw: redraws of the same 10 papers look too alike, so the range comes out too narrow.</span>
+          </div>
+          <div>
+            <h3>New: permutation test</h3>
+            <ol>
+              <li>If nothing changed, "old" and "new" are interchangeable on each paper.</li>
+              <li>Try every way of swapping them: 1,024 ways for 10 papers.</li>
+              <li>That shows every result pure luck could give.</li>
+              <li>Call it real only if the actual result beats 95% of them.</li>
+            </ol>
+            <span class="verdict good">It makes no assumptions, so it keeps the 5% promise.</span>
+          </div>
+        </div>
+      </div>
+      <div class="fig">
+        <h3>False alarms at every size, out of 200 tries</h3>
+        <div class="scroll">
+          <table>
+            <thead><tr><th>Papers</th><th>Old check</th><th>New check</th></tr></thead>
+            <tbody>
+              <tr><td>10</td><td class="bad">24 (12%)</td><td class="good">8 (4%)</td></tr>
+              <tr><td>20</td><td class="bad">12 (6%)</td><td class="good">4 (2%)</td></tr>
+              <tr><td>40</td><td>10 (5%)</td><td class="good">4 (2%)</td></tr>
+              <tr><td>80</td><td>10 (5%)</td><td class="good">8 (4%)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="read"><b>The trade-off:</b> the new check is more careful, so it also says "better" less often. That is part of why step 5's numbers are low on 10 papers. The old check looked more sensitive only because it said "better" too easily.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" aria-labelledby="s7">
+    <div class="step-n">7</div>
+    <div class="step-body">
+      <div class="step-head"><span class="tag next">Next</span><h2 id="s7">From here to a real verdict on paperweight</h2></div>
+      <p class="point">Nothing so far says whether paperweight is accurate. That needs real human grades on WG21 papers.</p>
+      <div class="road">
+        <div><small>Step 1</small><h3>Real grades</h3><p>Vinnie's papers and his reviewers' grades, ideally about 40 papers.</p></div>
+        <div><small>Step 2</small><h3>The right model</h3><p>Rerun on the model the rulebook was tuned on, not gpt-6-luna.</p></div>
+        <div><small>Step 3</small><h3>The first real verdict</h3><p>Does paperweight agree with people, and does each change help?</p></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">Source: <a href="https://github.com/sykosyber/wg21-paperflow/pull/1">sykosyber/wg21-paperflow, pull request #1</a>: docs/plans/calibration-harness-status.md and packages/calibrate/studies/iclr-2025-reviewers.md. Real-run grades are synthetic, so no accuracy figure appears here; the ICLR study uses a different rubric and says nothing about paperweight itself.</p>
+</main>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, parent, text) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  if (text !== undefined) e.textContent = text;
+  if (parent) parent.append(e);
+  return e;
+}
+
+// Step 1: calls per paper, sorted. Sections are per graded run.
+(() => {
+  const svg = document.getElementById("calls");
+  const rows = [
+    ["P1068R11", 888, 14, false], ["P0533R9", 762, 12, false], ["P2040R0", 762, 12, false], ["P3290R4", 699, 11, false],
+    ["P1122R3", 573, 9, false], ["P3978R0", 573, 9, false], ["P4228R0", 573, 9, false], ["P0957R8", 510, 8, false],
+    ["P3953R0", 384, 6, false], ["P3556R0", 384, 9, true], ["P3411R5", 237, 11, true], ["P4020R0", 6, 0, true],
+  ];
+  const x0 = 100, w = 440, max = 888, h = 26;
+  rows.forEach(([id, calls, sections, warn], i) => {
+    const y = 10 + i * h;
+    el("text", { x: 0, y: y + 15, style: "font-size:14px;font-weight:700" }, svg, id);
+    const bw = Math.max(3, calls / max * w);
+    el("rect", { x: x0, y: y + 3, width: bw, height: 16, rx: 3, fill: warn ? "var(--warn)" : "var(--real)" }, svg);
+    el("text", { x: x0 + bw + 8, y: y + 15, style: "font-size:14px;font-weight:700", class: "num" }, svg, calls.toLocaleString("en-US"));
+    const note = calls === 6 ? "2 calls × 3 runs" : `${sections} sections`;
+    el("text", { x: 680, y: y + 15, "text-anchor": "end", class: "m", style: "font-size:13px" }, svg, note);
+  });
+  el("line", { x1: 0, x2: 680, y1: 330, y2: 330, stroke: "var(--line)" }, svg);
+  el("text", { x: 0, y: 360, style: "font-size:15px;font-weight:700" }, svg, "Total");
+  el("text", { x: x0, y: 360, style: "font-size:15px;font-weight:700" }, svg, "6,351 AI calls");
+})();
+
+// Step 2: three runs per paper on the 0 to 14 scale.
+(() => {
+  const svg = document.getElementById("wobble");
+  const X = (v) => 110 + v / 14 * 560;
+  const bands = [["Light", 0.5, 3.5], ["Medium", 3.5, 7.5], ["Heavy", 7.5, 11.5], ["Supermassive", 11.5, 14]];
+  bands.forEach(([name, a, b], i) => {
+    el("rect", { x: X(a), y: 24, width: X(b) - X(a), height: 250, fill: i % 2 ? "var(--surface)" : "var(--faint)" }, svg);
+    el("text", { x: (X(a) + X(b)) / 2, y: 16, "text-anchor": "middle", class: "m", style: "font-size:13px" }, svg, name);
+  });
+  [0, 2, 4, 6, 8, 10, 12, 14].forEach((v) => el("text", { x: X(v), y: 296, "text-anchor": "middle", class: "m", style: "font-size:13px" }, svg, v));
+  el("text", { x: X(7), y: 322, "text-anchor": "middle", class: "m", style: "font-size:13px" }, svg, "total score, out of 14");
+  const data = [
+    ["P3290R4", [11.33, 11.17, 11.33]], ["P0533R9", [8.00, 8.00, 8.33]], ["P1122R3", [7.17, 5.83, 6.83]],
+    ["P3978R0", [6.83, 8.17, 7.17]], ["P2040R0", [8.00, 6.33, 6.67]],
+  ];
+  data.forEach(([id, runs], i) => {
+    const y = 60 + i * 48;
+    const crosses = runs.some((r) => r < 7.5) && runs.some((r) => r >= 7.5);
+    const color = crosses ? "var(--alarm)" : "var(--real)";
+    el("text", { x: 0, y: y + 5, style: "font-size:14px;font-weight:700" }, svg, id);
+    el("line", { x1: X(Math.min(...runs)), x2: X(Math.max(...runs)), y1: y, y2: y, stroke: color, "stroke-width": 3 }, svg);
+    runs.forEach((r) => el("circle", { cx: X(r), cy: y, r: 7, fill: color, stroke: "var(--surface)", "stroke-width": 2 }, svg));
+  });
+})();
+
+// Step 3: two papers, three runs.
+(() => {
+  const svg = document.getElementById("triage");
+  const rows = [
+    ["P3411R5", [["not a proposal", "no score", 0], ["proposal", "Heavy, 9.83", 1], ["not a proposal", "no score", 0]]],
+    ["P3556R0", [["proposal", "Light, 3.00", 1], ["not a proposal", "no score", 0], ["proposal", "Light, 3.00", 1]]],
+  ];
+  ["run 1", "run 2", "run 3"].forEach((t, k) => el("text", { x: 110 + k * 190 + 85, y: 14, "text-anchor": "middle", class: "m", style: "font-size:13px" }, svg, t));
+  rows.forEach(([id, runs], i) => {
+    const y = 26 + i * 86;
+    el("text", { x: 0, y: y + 44, style: "font-size:15px;font-weight:700" }, svg, id);
+    runs.forEach(([verdict, score, ok], k) => {
+      const x = 110 + k * 190, c = ok ? "var(--real)" : "var(--warn)";
+      el("rect", { x, y, width: 170, height: 70, rx: 10, fill: "var(--bg)", stroke: c, "stroke-width": 2 }, svg);
+      el("text", { x: x + 14, y: y + 30, style: `font-size:15px;font-weight:700;fill:${c}` }, svg, verdict);
+      el("text", { x: x + 14, y: y + 54, style: "font-size:14px" }, svg, score);
+    });
+  });
+})();
+
+// Steps 5 and 6: grids of 200 tries, 20 across and 10 down.
+function waffle(lit, color, budget) {
+  const svg = el("svg", { viewBox: "0 0 200 100", role: "img" });
+  for (let i = 0; i < 200; i++) {
+    const cx = 5 + (i % 20) * 10, cy = 5 + Math.floor(i / 20) * 10;
+    el("circle", { class: "dot", cx, cy, r: 3.8, fill: i < lit ? color : "var(--line)" }, svg);
+  }
+  if (budget) el("rect", { x: 0.5, y: 0.5, width: budget * 10 - 1, height: 9, rx: 2, fill: "none", stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "2 1.5" }, svg);
+  return svg;
+}
+function card(parent, label, lit, color, budget) {
+  const d = document.createElement("div");
+  d.className = "waffle";
+  d.innerHTML = `<span class="label">${label}</span>`;
+  const svg = waffle(lit, color, budget);
+  svg.setAttribute("aria-label", `${lit} of 200 tries`);
+  d.append(svg);
+  const c = document.createElement("span");
+  c.className = "count";
+  c.innerHTML = `<b>${lit}</b> of 200 (${Math.round(lit / 2)}%)`;
+  d.append(c);
+  parent.append(d);
+  return { svg, c };
+}
+
+const POWER = { cut19: [16, 36, 78, 140], cut25: [28, 56, 116, 174] };
+const power = document.getElementById("power");
+const cards = [10, 20, 40, 80].map((n, i) => card(power, `${n} papers`, POWER.cut19[i], "var(--proxy)"));
+function showPower(key) {
+  document.querySelectorAll(".toggle button").forEach((b) => b.setAttribute("aria-pressed", String(b.id === key)));
+  cards.forEach(({ svg, c }, i) => {
+    const lit = POWER[key][i];
+    svg.querySelectorAll(".dot").forEach((d, j) => d.setAttribute("fill", j < lit ? "var(--proxy)" : "var(--line)"));
+    svg.setAttribute("aria-label", `${lit} of 200 tries`);
+    c.innerHTML = `<b>${lit}</b> of 200 (${Math.round(lit / 2)}%)`;
+  });
+}
+document.getElementById("cut19").onclick = () => showPower("cut19");
+document.getElementById("cut25").onclick = () => showPower("cut25");
+
+const alarms = document.getElementById("alarms");
+card(alarms, "Old check (bootstrap interval)", 24, "var(--alarm)", 10);
+card(alarms, "New check (permutation test)", 8, "var(--alarm)", 10);
+</script>

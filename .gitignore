@@ -29,6 +29,13 @@ data/
 reports/
 .cursor/
 
+# Calibration run folders (calibrate full / replay); kept as CI artifacts, never committed
+calibration-runs/
+
+# Calibrate package data: the synthetic set and the golden set (negates global data/ above)
+!packages/calibrate/data/
+!packages/calibrate/data/**
+
 # Assay package data: allow only committed subtrees (negates global data/ above)
 !packages/assay/data/
 packages/assay/data/*
